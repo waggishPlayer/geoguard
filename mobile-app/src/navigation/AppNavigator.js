@@ -2,11 +2,13 @@ import React from 'react'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { Ionicons } from '@expo/vector-icons'
+import { Image, TouchableOpacity } from 'react-native'
 import { COLORS, ROLES } from '../utils/constants'
 
 // Screens
 import HomeScreen from '../screens/HomeScreen'
 import MapScreen from '../screens/MapScreen'
+import ClimateScreen from '../screens/ClimateScreen'
 import ComplaintScreen from '../screens/ComplaintScreen'
 import SosScreen from '../screens/SosScreen'
 import GovAlertsScreen from '../screens/GovAlertsScreen'
@@ -23,7 +25,7 @@ import AdminScreen from '../screens/AdminScreen'
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
 
-function HomeStack() {
+function HomeStack({ onLogout, user }) {
   return (
     <Stack.Navigator
       screenOptions={{
@@ -31,9 +33,27 @@ function HomeStack() {
         headerTintColor: COLORS.text,
       }}
     >
-      <Stack.Screen name="HomeMain" component={HomeScreen} options={{ title: 'Dashboard' }} />
+      <Stack.Screen
+        name="HomeMain"
+        component={HomeScreen}
+        options={({ navigation }) => ({
+          title: 'Dashboard',
+          headerRight: () => (
+            <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+              <Image
+                source={{ uri: 'https://ui-avatars.com/api/?name=' + (user?.name || 'User') + '&background=random' }}
+                style={{ width: 32, height: 32, borderRadius: 16 }}
+              />
+            </TouchableOpacity>
+          )
+        })}
+      />
       <Stack.Screen name="Alerts" component={AlertsScreen} />
-      <Stack.Screen name="Profile" component={ProfileScreen} />
+      <Stack.Screen name="Map" component={MapScreen} />
+      <Stack.Screen name="Climate" component={ClimateScreen} />
+      <Stack.Screen name="Profile">
+        {(props) => <ProfileScreen {...props} onLogout={onLogout} />}
+      </Stack.Screen>
     </Stack.Navigator>
   )
 }
@@ -68,8 +88,15 @@ function SensorsStack() {
 }
 
 export default function AppNavigator({ user, onLogout }) {
-  const isAdmin = user?.role_name === ROLES.SITE_ADMIN || user?.role_name === ROLES.SUPER_ADMIN
-  const isGov = user?.role_name === ROLES.GOV_AUTHORITY || user?.role_name === ROLES.SUPER_ADMIN
+  const isSuperAdmin = user?.role_name === ROLES.SUPER_ADMIN
+  const isSiteAdmin = user?.role_name === ROLES.SITE_ADMIN
+  const isFieldWorker = user?.role_name === ROLES.FIELD_WORKER
+  const isGov = user?.role_name === ROLES.GOV_AUTHORITY
+
+  const canSeeML = isSuperAdmin || isSiteAdmin
+  const canSeeTasks = isSuperAdmin || isSiteAdmin || isFieldWorker
+  const canSeeAdvisories = isSuperAdmin || isGov
+  const canSeeAdmin = isSuperAdmin
 
   return (
     <Tab.Navigator
@@ -87,8 +114,7 @@ export default function AppNavigator({ user, onLogout }) {
 
           if (route.name === 'HomeTab') {
             iconName = focused ? 'home' : 'home-outline'
-          } else if (route.name === 'Map') {
-            iconName = focused ? 'map' : 'map-outline'
+
           } else if (route.name === 'Report') {
             iconName = focused ? 'camera' : 'camera-outline'
           } else if (route.name === 'SOS') {
@@ -97,10 +123,12 @@ export default function AppNavigator({ user, onLogout }) {
             iconName = focused ? 'hardware-chip' : 'hardware-chip-outline'
           } else if (route.name === 'ML') {
             iconName = focused ? 'analytics' : 'analytics-outline'
+          } else if (route.name === 'Alerts') {
+            iconName = focused ? 'notifications' : 'notifications-outline'
           } else if (route.name === 'Tasks') {
             iconName = focused ? 'list' : 'list-outline'
           } else if (route.name === 'Advisories') {
-            iconName = focused ? 'notifications' : 'notifications-outline'
+            iconName = focused ? 'megaphone' : 'megaphone-outline'
           } else if (route.name === 'Admin') {
             iconName = focused ? 'settings' : 'settings-outline'
           }
@@ -111,10 +139,12 @@ export default function AppNavigator({ user, onLogout }) {
     >
       <Tab.Screen
         name="HomeTab"
-        component={HomeStack}
         options={{ title: 'Home', headerShown: false }}
-      />
-      <Tab.Screen name="Map" component={MapScreen} />
+      >
+        {() => <HomeStack onLogout={onLogout} user={user} />}
+      </Tab.Screen>
+
+      <Tab.Screen name="Alerts" component={AlertsScreen} />
       <Tab.Screen name="Report" component={ComplaintScreen} />
       <Tab.Screen name="SOS" component={SosScreen} />
 
@@ -123,36 +153,44 @@ export default function AppNavigator({ user, onLogout }) {
         component={SensorsStack}
         options={{ headerShown: false }}
       />
-      <Tab.Screen
-        name="ML"
-        component={MLStack}
-        options={{ headerShown: false }}
-      />
-      <Tab.Screen name="Tasks" component={TasksScreen} />
-      {
-        isGov && (
-          <Tab.Screen name="Advisories" component={GovAlertsScreen} />
-        )
-      }
-      {
-        user?.role_name === ROLES.SUPER_ADMIN && (
-          <Tab.Screen
-            name="Admin"
-            component={AdminScreen}
-            options={{
-              headerRight: () => (
-                <Ionicons
-                  name="log-out-outline"
-                  color={COLORS.danger}
-                  size={24}
-                  style={{ marginRight: 16 }}
-                  onPress={onLogout}
-                />
-              ),
-            }}
-          />
-        )
-      }
+
+      {canSeeML && (
+        <Tab.Screen
+          name="ML"
+          component={MLStack}
+          options={{ headerShown: false }}
+        />
+      )}
+
+      {canSeeTasks && (
+        <Tab.Screen name="Tasks" component={TasksScreen} />
+      )}
+
+      {canSeeAdvisories && (
+        <Tab.Screen
+          name="Advisories"
+          component={GovAlertsScreen}
+          options={{ title: 'Post Advisory' }}
+        />
+      )}
+
+      {canSeeAdmin && (
+        <Tab.Screen
+          name="Admin"
+          component={AdminScreen}
+          options={{
+            headerRight: () => (
+              <Ionicons
+                name="log-out-outline"
+                color={COLORS.danger}
+                size={24}
+                style={{ marginRight: 16 }}
+                onPress={onLogout}
+              />
+            ),
+          }}
+        />
+      )}
     </Tab.Navigator >
   )
 }

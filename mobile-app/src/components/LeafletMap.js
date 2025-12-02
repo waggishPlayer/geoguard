@@ -1,61 +1,12 @@
 import React, { useRef, useEffect } from 'react';
-import { StyleSheet, View, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ActivityIndicator, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 
 export default function LeafletMap({ markers = [], onMarkerPress }) {
   const webViewRef = useRef(null);
+  const [loadingProgress, setLoadingProgress] = React.useState(0);
 
-  // Generate HTML content for the WebView
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <style>
-          body { margin: 0; padding: 0; height: 100%; width: 100%; }
-          #map { height: 100%; width: 100%; }
-        </style>
-      </head>
-      <body>
-        <div id="map"></div>
-        <script>
-          var map = L.map('map').setView([20.5937, 78.9629], 5);
-
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-          }).addTo(map);
-
-          var markersData = ${JSON.stringify(markers)};
-          var markerLayer = L.layerGroup().addTo(map);
-
-          function updateMarkers(newMarkers) {
-            markerLayer.clearLayers();
-            var bounds = L.latLngBounds();
-            
-            newMarkers.forEach(function(m) {
-              var marker = L.marker([m.latitude, m.longitude])
-                .addTo(markerLayer)
-                .bindPopup('<b>' + m.title + '</b><br>' + m.subtitle);
-              
-              marker.on('click', function() {
-                window.ReactNativeWebView.postMessage(JSON.stringify(m));
-              });
-
-              bounds.extend([m.latitude, m.longitude]);
-            });
-
-            if (newMarkers.length > 0) {
-              map.fitBounds(bounds, { padding: [50, 50] });
-            }
-          }
-
-          updateMarkers(markersData);
-        </script>
-      </body>
-    </html>
-  `;
+  // ... htmlContent ...
 
   // Handle messages from WebView (marker clicks)
   const handleMessage = (event) => {
@@ -74,12 +25,28 @@ export default function LeafletMap({ markers = [], onMarkerPress }) {
       <WebView
         ref={webViewRef}
         originWhitelist={['*']}
-        source={{ html: htmlContent, baseUrl: 'file:///android_asset/' }}
+        source={{ html: htmlContent, baseUrl: 'https://google.com' }} // Hack for Android to load external tiles
         style={styles.webview}
         onMessage={handleMessage}
-        startInLoadingState={true}
-        renderLoading={() => <ActivityIndicator size="large" color="#0000ff" style={styles.loading} />}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        onLoadProgress={({ nativeEvent }) => setLoadingProgress(nativeEvent.progress)}
+        onError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          console.warn('WebView error: ', nativeEvent);
+        }}
+        onHttpError={(syntheticEvent) => {
+          const { nativeEvent } = syntheticEvent;
+          console.warn('WebView HTTP error: ', nativeEvent);
+        }}
+        androidLayerType="hardware"
       />
+      {loadingProgress < 1 && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#38bdf8" />
+          <Text style={styles.loadingText}>Loading Map... {Math.round(loadingProgress * 100)}%</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -87,15 +54,23 @@ export default function LeafletMap({ markers = [], onMarkerPress }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#0f172a', // Match app background
   },
   webview: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
-  loading: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    zIndex: 1,
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#0f172a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -97,11 +97,87 @@ const raiseSOS = async (req, res, next) => {
   }
 };
 
+const listAllAlerts = async (req, res, next) => {
+  try {
+    const { slopeId } = req.query;
+
+    // 1. Fetch System Alerts (SOS, Sensor Thresholds)
+    const alertsRes = slopeId ? await getAlertsBySlope(slopeId) : { rows: [] };
+
+    // 2. Fetch Gov Advisories
+    const { getAdvisories } = require('../models/queries');
+    const advisoriesRes = await getAdvisories();
+
+    // 3. Fetch Field Worker Reports (Complaints)
+    const { getAllComplaints } = require('../models/queries');
+    const complaintsRes = await getAllComplaints();
+
+    // Merge and Format
+    const combined = [
+      ...alertsRes.rows.map(a => ({
+        id: `alert-${a.id}`,
+        type: a.alert_type === 'sos' ? 'SOS' : 'SYSTEM',
+        title: a.alert_type === 'sos' ? 'SOS Alert' : 'System Alert',
+        message: a.message,
+        severity: a.severity,
+        date: a.created_at,
+        source: 'System'
+      })),
+      ...advisoriesRes.rows.map(a => ({
+        id: `adv-${a.id}`,
+        type: 'ADVISORY',
+        title: a.title || 'Government Advisory',
+        message: a.message,
+        severity: a.severity,
+        date: a.created_at,
+        source: 'Government'
+      })),
+      ...complaintsRes.rows.filter(c => !slopeId || c.slope_id == slopeId).map(c => ({
+        id: `rep-${c.id}`,
+        type: 'REPORT',
+        title: 'Field Report',
+        message: c.description,
+        severity: 'info',
+        date: c.created_at,
+        source: 'Field Worker'
+      }))
+    ];
+
+    // Sort by Date Descending
+    combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return res.json({
+      success: true,
+      data: combined
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const postAdvisory = async (req, res, next) => {
+  try {
+    const { title, message, severity = 'info', slopeId } = req.body;
+    const { createAdvisory } = require('../models/queries');
+
+    const created = await createAdvisory(req.user.id, null, slopeId, title, message, severity, null);
+
+    return res.status(201).json({
+      success: true,
+      data: created.rows[0]
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createAlert: createAlertController,
   acknowledge,
   getAlertsForSlope,
-  raiseSOS
+  raiseSOS,
+  listAllAlerts,
+  postAdvisory
 };
 
 

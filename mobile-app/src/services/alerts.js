@@ -1,14 +1,22 @@
 import api from './api'
 
 export const alertsService = {
-  async getAll() {
+  async getAll(slopeId) {
     try {
-      // Note: Backend doesn't have GET /api/alerts endpoint
-      // Return empty array or implement slope-based fetching
-      // To get alerts, use getBySlope(slopeId) instead
-      return []
+      const params = slopeId ? { slopeId } : {}
+      const response = await api.get('/alerts/all', { params })
+      return response.data.data
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to fetch alerts')
+    }
+  },
+
+  async postAdvisory(payload) {
+    try {
+      const response = await api.post('/alerts/advisory', payload)
+      return response.data.data
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to post advisory')
     }
   },
 

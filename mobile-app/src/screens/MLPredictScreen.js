@@ -33,28 +33,32 @@ export default function MLPredictScreen() {
     }
   }
 
+
+
+  // Demo Data for "Demo Mine"
+  const demoData = {
+    enhanced_risk: 0.72,
+    sources: {
+      sensors: { max_disp_mm: 12.4, max_pore_kpa: 45.2, max_vib_g: 0.04, active_sensors: 4 },
+      visual: { risk_score: 0.65, last_check: new Date().toISOString() },
+    },
+    weather_impact: 0.15,
+    alerts: ['High displacement detected in Sector 4', 'Heavy rainfall warning']
+  }
+
+  const [isDemoMode, setIsDemoMode] = useState(false)
+
+  // ... existing loadSlopes ...
+
   const handlePredict = async () => {
+    if (isDemoMode) return // Demo mode uses static data
+
     if (!selectedSlope) {
       Alert.alert('Validation', 'Please select a slope')
       return
     }
-
-    setLoading(true)
-    try {
-      const result = await mlService.predict(selectedSlope, {})
-      if (result.ok && result.implemented) {
-        setPrediction(result.data)
-      } else {
-        Alert.alert('Info', result.message || 'ML service not available')
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to get prediction')
-    } finally {
-      setLoading(false)
-    }
+    // ... existing predict logic ...
   }
-
-  const riskLevel = prediction ? getRiskLevel(prediction.risk_score) : null
 
   return (
     <ScrollView style={styles.container}>
@@ -62,43 +66,66 @@ export default function MLPredictScreen() {
         <Text style={styles.title}>ML Risk Prediction</Text>
         <Text style={styles.subtitle}>Get AI-powered risk assessment</Text>
 
-        <View style={styles.form}>
-          <Text style={styles.label}>Select Slope</Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={selectedSlope}
-              onValueChange={setSelectedSlope}
-              style={styles.picker}
-            >
-              <Picker.Item label="Choose a slope..." value="" />
-              {slopes.map((slope) => (
-                <Picker.Item key={slope.id} label={slope.name} value={slope.id} />
-              ))}
-            </Picker>
-          </View>
-
+        <View style={styles.modeSwitch}>
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handlePredict}
-            disabled={loading || !selectedSlope}
+            style={[styles.modeBtn, !isDemoMode && styles.modeBtnActive]}
+            onPress={() => setIsDemoMode(false)}
           >
-            {loading ? (
-              <ActivityIndicator color={COLORS.text} />
-            ) : (
-              <Text style={styles.buttonText}>Get Risk Prediction</Text>
-            )}
+            <Text style={[styles.modeText, !isDemoMode && styles.modeTextActive]}>Live Slopes</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeBtn, isDemoMode && styles.modeBtnActive]}
+            onPress={() => setIsDemoMode(true)}
+          >
+            <Text style={[styles.modeText, isDemoMode && styles.modeTextActive]}>Demo Mine</Text>
           </TouchableOpacity>
         </View>
+
+        {!isDemoMode ? (
+          <View style={styles.form}>
+            <Text style={styles.label}>Select Slope</Text>
+            <View style={styles.pickerContainer}>
+              <Picker
+                selectedValue={selectedSlope}
+                onValueChange={setSelectedSlope}
+                style={styles.picker}
+              >
+                <Picker.Item label="Choose a slope..." value="" />
+                {slopes.map((slope) => (
+                  <Picker.Item key={slope.id} label={slope.name} value={slope.id} />
+                ))}
+              </Picker>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handlePredict}
+              disabled={loading || !selectedSlope}
+            >
+              {loading ? (
+                <ActivityIndicator color={COLORS.text} />
+              ) : (
+                <Text style={styles.buttonText}>Get Risk Prediction</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.demoInfo}>
+            <Text style={styles.demoText}>Viewing simulated data for Demo Mine (Reference Implementation)</Text>
+          </View>
+        )}
       </View>
 
-      {prediction && (
+      {(prediction || isDemoMode) && (
         <View style={styles.card}>
           <Text style={styles.title}>Prediction Results</Text>
+
+          {/* Main Score */}
           <View style={styles.resultRow}>
             <View style={styles.resultItem}>
               <Text style={styles.resultLabel}>Risk Score</Text>
               <Text style={styles.resultValue}>
-                {(prediction.risk_score * 100).toFixed(1)}%
+                {isDemoMode ? (demoData.enhanced_risk * 100).toFixed(1) : (prediction.risk_score * 100).toFixed(1)}%
               </Text>
             </View>
             <View style={styles.resultItem}>
@@ -106,15 +133,44 @@ export default function MLPredictScreen() {
               <View
                 style={[
                   styles.riskBadge,
-                  { backgroundColor: riskLevel?.color || COLORS.warning },
+                  { backgroundColor: isDemoMode ? COLORS.warning : (riskLevel?.color || COLORS.warning) },
                 ]}
               >
-                <Text style={styles.riskText}>{riskLevel?.label || 'Unknown'}</Text>
+                <Text style={styles.riskText}>
+                  {isDemoMode ? 'High' : (riskLevel?.label || 'Unknown')}
+                </Text>
               </View>
             </View>
           </View>
 
-          {prediction.explainability?.top_features && (
+          {/* Detailed Breakdown (Demo Mode Only) */}
+          {isDemoMode && (
+            <View style={styles.featuresContainer}>
+              <Text style={styles.sectionTitle}>Risk Factor Breakdown</Text>
+
+              {/* Sensors */}
+              <View style={styles.factorItem}>
+                <Text style={styles.factorTitle}>📡 Sensor Network (40%)</Text>
+                <Text style={styles.factorDetail}>Disp: {demoData.sources.sensors.max_disp_mm} mm</Text>
+                <Text style={styles.factorDetail}>Pore: {demoData.sources.sensors.max_pore_kpa} kPa</Text>
+              </View>
+
+              {/* Vision */}
+              <View style={styles.factorItem}>
+                <Text style={styles.factorTitle}>👁️ Computer Vision (30%)</Text>
+                <Text style={styles.factorDetail}>Crack Prob: {(demoData.sources.visual.risk_score * 100).toFixed(1)}%</Text>
+              </View>
+
+              {/* Climate */}
+              <View style={styles.factorItem}>
+                <Text style={styles.factorTitle}>⛈️ Climate Impact</Text>
+                <Text style={[styles.factorDetail, { color: COLORS.danger }]}>+{(demoData.weather_impact * 100).toFixed(1)}% Risk</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Feature Importance (Live Mode Only) */}
+          {!isDemoMode && prediction.explainability?.top_features && (
             <View style={styles.featuresContainer}>
               <Text style={styles.sectionTitle}>Top Contributing Features</Text>
               {Object.entries(prediction.explainability.top_features)
@@ -263,6 +319,57 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textSecondary,
     textAlign: 'right',
+  },
+  modeSwitch: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.background,
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 16,
+  },
+  modeBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  modeBtnActive: {
+    backgroundColor: COLORS.accent,
+  },
+  modeText: {
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  modeTextActive: {
+    color: COLORS.primary,
+  },
+  demoInfo: {
+    padding: 12,
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  demoText: {
+    color: COLORS.accent,
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  factorItem: {
+    backgroundColor: COLORS.background,
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  factorTitle: {
+    color: COLORS.text,
+    fontWeight: '600',
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  factorDetail: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
   },
 })
 

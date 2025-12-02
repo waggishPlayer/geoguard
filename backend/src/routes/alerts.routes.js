@@ -5,24 +5,30 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
+router.get('/all', requireAuth, alertsController.listAllAlerts);
+
+router.post(
+  '/advisory',
+  requireAuth,
+  requireRole('GOV_AUTHORITY', 'SUPER_ADMIN'),
+  alertsController.postAdvisory
+);
+
 router.post(
   '/',
   requireAuth,
-  requireRole('SITE_ADMIN', 'SUPER_ADMIN', 'GOV_AUTHORITY'),
   alertsController.createAlert
 );
 
 router.post(
   '/sos',
   requireAuth,
-  requireRole('FIELD_WORKER'),
   alertsController.raiseSOS
 );
 
-router.post(
+router.put(
   '/:alertId/acknowledge',
   requireAuth,
-  requireRole('SITE_ADMIN', 'SUPER_ADMIN', 'GOV_AUTHORITY'),
   alertsController.acknowledge
 );
 

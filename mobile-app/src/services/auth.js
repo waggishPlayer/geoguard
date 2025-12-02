@@ -5,7 +5,7 @@ export const authService = {
   async login(email, password) {
     try {
       const response = await api.post('/auth/login', { email, password })
-      
+
       if (!response.data?.success) {
         throw new Error(response.data?.message || 'Invalid credentials')
       }
@@ -56,6 +56,16 @@ export const authService = {
       return user
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to get profile')
+    }
+  },
+
+  async getRoles() {
+    try {
+      const response = await api.get('/auth/roles')
+      return response.data.data
+    } catch (error) {
+      console.warn('Failed to fetch roles', error)
+      return []
     }
   },
 

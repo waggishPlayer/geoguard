@@ -1,23 +1,27 @@
 import { useEffect, useState } from 'react'
 import { RefreshControl, ScrollView, StyleSheet, Text, View, TouchableOpacity, Alert, Image } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import { alertsService } from '../services/alerts'
+import { authService } from '../services/auth'
 import api from '../services/api'
 import { useOfflineQueue } from '../hooks/useOfflineQueue'
 import { useNetwork } from '../hooks/useNetwork'
-import { COLORS } from '../utils/constants'
+import { COLORS, ROLES } from '../utils/constants'
 
 export default function HomeScreen() {
   const navigation = useNavigation()
   const [refreshing, setRefreshing] = useState(false)
   const [riskLevel, setRiskLevel] = useState('Low')
   const [weather, setWeather] = useState({ temp: '--', rain: '--' })
+  const [user, setUser] = useState(null)
   const { isOnline } = useNetwork()
 
   const loadData = async () => {
     try {
       // Fetch sensors to get latest data
-      const sensorsRes = await api.get('/sensors')
+      const params = user?.slope_id ? { slopeId: user.slope_id } : {}
+      const sensorsRes = await api.get('/sensors', { params })
       const sensors = sensorsRes.data.data
 
       if (sensors && sensors.length > 0) {
@@ -53,8 +57,19 @@ export default function HomeScreen() {
   }
 
   useEffect(() => {
-    loadData()
+    loadUser()
   }, [])
+
+  useEffect(() => {
+    if (user) {
+      loadData()
+    }
+  }, [user])
+
+  const loadUser = async () => {
+    const u = await authService.getCurrentUser()
+    setUser(u)
+  }
 
   const onRefresh = async () => {
     setRefreshing(true)
@@ -62,18 +77,7 @@ export default function HomeScreen() {
     setRefreshing(false)
   }
 
-  const handleGenerateDemoData = async () => {
-    try {
-      setRefreshing(true)
-      await api.post('/admin/demo-data')
-      await loadData()
-      Alert.alert('Success', 'New demo data generated!')
-    } catch (error) {
-      Alert.alert('Error', 'Failed to generate demo data')
-    } finally {
-      setRefreshing(false)
-    }
-  }
+
 
   const getRiskColor = () => {
     if (riskLevel === 'High') return COLORS.danger
@@ -93,18 +97,22 @@ export default function HomeScreen() {
         </View>
       </View>
 
+
+
       <View style={styles.grid}>
         {/* 1. Rockfall Prediction */}
-        <TouchableOpacity style={[styles.card, styles.cardLarge]} onPress={() => navigation.navigate('ML', { screen: 'MLMain' })}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Rockfall Prediction</Text>
-          </View>
-          <View style={styles.riskContainer}>
-            <Text style={[styles.riskValue, { color: getRiskColor() }]}>{riskLevel}</Text>
-            <Text style={styles.riskLabel}>Current Risk Level</Text>
-          </View>
-          <Text style={styles.cardFooter}>Tap for sensor details</Text>
-        </TouchableOpacity>
+        {(user?.role_name === ROLES.SUPER_ADMIN || user?.role_name === ROLES.SITE_ADMIN) && (
+          <TouchableOpacity style={[styles.card, styles.cardLarge]} onPress={() => navigation.navigate('ML', { screen: 'MLMain' })}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Rockfall Prediction</Text>
+            </View>
+            <View style={styles.riskContainer}>
+              <Text style={[styles.riskValue, { color: getRiskColor() }]}>{riskLevel}</Text>
+              <Text style={styles.riskLabel}>Current Risk Level</Text>
+            </View>
+            <Text style={styles.cardFooter}>Tap for sensor details</Text>
+          </TouchableOpacity>
+        )}
 
         {/* 2. Evacuation System */}
         <TouchableOpacity style={[styles.card, styles.cardMedium]} onPress={() => navigation.navigate('SOS')}>
@@ -129,7 +137,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         {/* 4. Climate */}
-        <TouchableOpacity style={[styles.card, styles.cardLarge]} onPress={() => Alert.alert('Climate', `Temperature: ${weather.temp}\nPrecipitation: ${weather.rain}`)}>
+        <TouchableOpacity style={[styles.card, styles.cardLarge]} onPress={() => navigation.navigate('Climate')}>
           <View style={styles.cardHeader}>
             <Text style={styles.cardTitle}>Climate</Text>
           </View>
@@ -146,9 +154,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity style={styles.demoButton} onPress={handleGenerateDemoData}>
-        <Text style={styles.demoButtonText}>Simulate Demo Data</Text>
-      </TouchableOpacity>
+
     </ScrollView>
   )
 }
@@ -227,10 +233,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   cardFooter: {
-    color: '#64748b',
+    marginTop: 12,
     fontSize: 12,
-    textAlign: 'center',
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
   },
+
   iconContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -261,17 +269,6 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 14,
   },
-  demoButton: {
-    marginTop: 20,
-    backgroundColor: COLORS.accent,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  demoButtonText: {
-    color: '#0f172a',
-    fontWeight: '700',
-    fontSize: 16,
-  },
+
 })
 

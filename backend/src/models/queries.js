@@ -9,11 +9,11 @@ const getRoleById = (id) => query(`SELECT * FROM roles WHERE id = $1`, [id]);
 /* ============================================================
    USERS
 ============================================================ */
-const createUser = (role_id, name, email, phone, password_hash) =>
+const createUser = (role_id, name, email, phone, password_hash, slope_id = null) =>
   query(
-    `INSERT INTO users (role_id, name, email, phone, password_hash)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [role_id, name, email, phone, password_hash]
+    `INSERT INTO users (role_id, name, email, phone, password_hash, slope_id)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [role_id, name, email, phone, password_hash, slope_id]
   );
 
 const getUserByEmail = (email) =>
@@ -630,7 +630,7 @@ const getAdvisories = (filter = {}) => {
      LEFT JOIN users sa ON sa.id = a.target_site_admin_id
      ${whereClause}
      ORDER BY a.created_at DESC`
-  , values);
+    , values);
 };
 
 const getAdvisoryAttachments = (advisory_id) =>
@@ -714,5 +714,16 @@ module.exports = {
   createAdvisory,
   addAdvisoryAttachment,
   getAdvisories,
-  getAdvisoryAttachments
+  getAdvisoryAttachments,
+  createDefaultSensors: async (slope_id) => {
+    const sensors = [
+      { name: 'Displacement Sensor 1', type: 'displacement', unit: 'mm' },
+      { name: 'Rain Gauge', type: 'rain_gauge', unit: 'mm' },
+      { name: 'Seismic Sensor', type: 'seismic', unit: 'Hz' },
+      { name: 'Tiltmeter', type: 'tilt', unit: 'deg' }
+    ];
+    for (const s of sensors) {
+      await createSensor(slope_id, s.name, s.type, s.unit);
+    }
+  }
 };

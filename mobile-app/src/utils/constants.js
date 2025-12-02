@@ -3,8 +3,8 @@ import { Platform } from 'react-native'
 
 const extra = Constants.expoConfig?.extra || Constants.manifest?.extra || {}
 
-export const API_URL = 'http://10.0.2.2:4000/api'
-export const SOCKET_URL = 'ws://10.0.2.2:4000'
+export const API_URL = 'http://localhost:4000/api'
+export const SOCKET_URL = 'ws://localhost:4000'
 
 export const MEDIA_MAX_SIZE_MB = 12
 export const DEVICE_PLATFORM = Platform.OS

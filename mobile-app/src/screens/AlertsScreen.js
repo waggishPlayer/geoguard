@@ -4,17 +4,31 @@ import { alertsService } from '../services/alerts'
 import AlertCard from '../components/AlertCard'
 import { COLORS } from '../utils/constants'
 
+import { authService } from '../services/auth'
+
 export default function AlertsScreen() {
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState(null)
 
   useEffect(() => {
-    loadAlerts()
+    loadUserAndAlerts()
   }, [])
 
-  const loadAlerts = async () => {
+  const loadUserAndAlerts = async () => {
     try {
-      const data = await alertsService.getAll()
+      const u = await authService.getCurrentUser()
+      setUser(u)
+      await loadAlerts(u?.slope_id)
+    } catch (error) {
+      console.error('Failed to load user/alerts:', error)
+      setLoading(false)
+    }
+  }
+
+  const loadAlerts = async (slopeId) => {
+    try {
+      const data = await alertsService.getAll(slopeId)
       setAlerts(data)
     } catch (error) {
       console.error('Failed to load alerts:', error)
@@ -28,7 +42,7 @@ export default function AlertsScreen() {
       <FlatList
         data={alerts}
         keyExtractor={(item) => item.id?.toString()}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadAlerts} />}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={() => loadAlerts(user?.slope_id)} />}
         renderItem={({ item }) => <AlertCard alert={item} />}
         ListEmptyComponent={
           <View style={styles.empty}>

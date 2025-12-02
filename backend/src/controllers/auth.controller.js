@@ -10,7 +10,10 @@ const {
   createGovAuthority,
   updateUserProfile,
   updateUserPassword,
-  getUserById
+  getUserById,
+  createSlope,
+  createDefaultSensors,
+  getAllRoles
 } = require('../models/queries');
 const config = require('../config/env');
 
@@ -74,8 +77,26 @@ const register = async (req, res, next) => {
       });
     }
 
+    let assignedSlopeId = null;
+
+    // Handle Mine Creation
+    if (req.body.mineDetails) {
+      const { name, description, lat, lng } = req.body.mineDetails;
+      if (!name || !lat || !lng) {
+        return res.status(400).json({
+          success: false,
+          message: 'Mine name and coordinates are required'
+        });
+      }
+      const newSlope = await createSlope(name, description || '', lat, lng);
+      assignedSlopeId = newSlope.rows[0].id;
+
+      // Initialize with default sensors
+      await createDefaultSensors(assignedSlopeId);
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
-    const createdUser = await createUser(targetRole.id, name, email, phone, passwordHash);
+    const createdUser = await createUser(targetRole.id, name, email, phone, passwordHash, assignedSlopeId);
     const userRecord = createdUser.rows[0];
 
     if (targetRole.name === 'gov_authority') {
@@ -186,10 +207,23 @@ const updateProfile = async (req, res, next) => {
   }
 };
 
+const getRoles = async (req, res, next) => {
+  try {
+    const roles = await getAllRoles();
+    return res.json({
+      success: true,
+      data: roles.rows
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   register,
   login,
-  updateProfile
+  updateProfile,
+  getRoles
 };
 
 
