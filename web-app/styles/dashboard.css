@@ -1,0 +1,94 @@
+/* Dashboard specific styles */
+
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+.dashboard-sidebar {
+  width: 256px;
+  background-color: #1f2937;
+  color: white;
+  padding: 1.5rem;
+}
+
+.dashboard-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-header {
+  background-color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1rem 1.5rem;
+}
+
+.dashboard-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem;
+}
+
+/* Map container */
+.map-container {
+  height: 400px;
+  width: 100%;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Alert cards */
+.alert-card {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  border-left-width: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.alert-critical {
+  background-color: #fef2f2;
+  border-color: #dc2626;
+}
+
+.alert-high {
+  background-color: #fff7ed;
+  border-color: #ea580c;
+}
+
+.alert-medium {
+  background-color: #fefce8;
+  border-color: #eab308;
+}
+
+.alert-low {
+  background-color: #f0fdf4;
+  border-color: #16a34a;
+}
+
+/* Sensor chart container */
+.sensor-chart-container {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+}
+
+/* Risk indicator */
+.risk-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
