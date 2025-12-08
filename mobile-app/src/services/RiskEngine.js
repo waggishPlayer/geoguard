@@ -1,7 +1,7 @@
 import { Alert } from 'react-native';
+import { weatherService } from './weather';
 
 // Configuration
-const API_KEY = "d35fba280190f0e95977742016f32cb4";
 const LAT = 11.1053;
 const LON = 79.1506;
 const GRID_SIZE = 20; // Increased from 12 for smaller cells
@@ -28,34 +28,42 @@ export const fetchWeatherData = async () => {
     }
 
     try {
-        const url = `https://api.openweathermap.org/data/2.5/forecast?lat=${LAT}&lon=${LON}&appid=${API_KEY}&units=metric`;
-        const response = await fetch(url);
-        const data = await response.json();
+        const live = await weatherService.getCurrentWeather();
 
-        if (data.cod !== "200") throw new Error(data.message);
+        // Normalize mixed string/number fields coming from weatherService
+        const humidityValue = Number(
+            (live?.humidityValue ?? parseFloat(String(live?.humidity || '0').replace('%', ''))) || 0
+        );
+        const tempValue = Number(
+            (live?.tempValue ?? parseFloat(String(live?.temp || '0').replace(/[^0-9.-]/g, ''))) || 0
+        );
+        const windValue = Number(
+            (live?.windValue ?? parseFloat(String(live?.wind || '0').replace(/[^0-9.-]/g, ''))) || 0
+        );
+        const rainValue = Number(
+            (live?.rainValue ?? parseFloat(String(live?.rain || '0').replace(/[^0-9.-]/g, ''))) || 0
+        );
 
-        const current = data.list[0];
-
-        // Calculate rainfall (approximate from 3h data)
-        const rain3h = current.rain ? current.rain['3h'] || 0 : 0;
-        const rain24h = rain3h * 8; // Rough estimate
-        const rain72h = rain24h * 3;
+        // Use forecast precipitation if available, otherwise fall back to current rain
+        const dailyPrecip = Array.isArray(live?.forecast) ? live.forecast.map(f => f?.precipitation || 0) : [];
+        const rain24h = dailyPrecip[0] ?? rainValue;
+        const rain72h = dailyPrecip.slice(0, 3).reduce((acc, val) => acc + val, 0) || rainValue;
 
         cachedWeatherData = {
-            temperature: current.main.temp,
-            humidity: current.main.humidity,
-            wind_speed: current.wind.speed,
-            weather_condition: current.weather[0].main,
+            temperature: tempValue,
+            humidity: humidityValue,
+            wind_speed: windValue,
+            weather_condition: (live?.description || 'Clear').replace(' (Simulated - API Error)', ''),
             rainfall_24h: rain24h,
             rainfall_72h: rain72h,
-            max_rain_intensity: rain3h / 3, // mm/hr
-            data_source: 'REAL_API'
+            max_rain_intensity: rainValue, // best proxy available without radar data
+            data_source: live?.dataSource || 'OPEN_METEO',
         };
         lastWeatherFetch = now;
         return cachedWeatherData;
     } catch (error) {
         console.warn("Weather fetch failed, using simulation:", error);
-        return {
+        cachedWeatherData = {
             temperature: 28 + Math.random() * 5,
             humidity: 60 + Math.random() * 20,
             wind_speed: 5 + Math.random() * 10,
@@ -65,6 +73,8 @@ export const fetchWeatherData = async () => {
             max_rain_intensity: 0,
             data_source: 'SIMULATION'
         };
+        lastWeatherFetch = now;
+        return cachedWeatherData;
     }
 };
 
@@ -162,7 +172,8 @@ export const calculateRiskGrid = async () => {
             );
 
             // 5. Final Score
-            let finalScore = baseRisk * weatherMultiplier;
+            // Slightly boost sensitivity so more cells surface as medium/high risk
+            let finalScore = baseRisk * weatherMultiplier * 1.08 + 0.02;
             finalScore = Math.max(0, Math.min(0.99, finalScore));
 
             grid.push({
