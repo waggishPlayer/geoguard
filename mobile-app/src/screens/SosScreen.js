@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import Constants from 'expo-constants';
 import { COLORS } from '../utils/constants';
+import { API_URL } from '../config/api';
 import { StatusBadge } from '../components/StatusBadge';
 
 // Theme mapping
@@ -59,9 +61,26 @@ export default function SosScreen({ navigation }) {
   const [selectedPerson, setSelectedPerson] = useState(null);
   const [showContacts, setShowContacts] = useState(false);
   const [sosTriggered, setSosTriggered] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  const sendSos = async () => {
+    setSending(true);
+    try {
+      await fetch(`${API_URL}/local/sos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-device-id': Constants.deviceName || 'mobile-device' },
+        body: JSON.stringify({ message: 'Mobile SOS', meta: { screen: 'SosScreen' } })
+      });
+    } catch (err) {
+      console.warn('SOS send failed', err.message);
+    } finally {
+      setSending(false);
+    }
+  };
 
   const handleSOS = () => {
     setSosTriggered(true);
+    sendSos();
     setTimeout(() => setSosTriggered(false), 3000);
   };
 
@@ -271,8 +290,9 @@ export default function SosScreen({ navigation }) {
         <TouchableOpacity
           style={[styles.btn, styles.btnSos, sosTriggered && styles.btnSosActive]}
           onPress={handleSOS}
+          disabled={sending}
         >
-          <Text style={styles.btnText}>🚨 SOS</Text>
+          <Text style={styles.btnText}>{sending ? 'Sending…' : '🚨 SOS'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity

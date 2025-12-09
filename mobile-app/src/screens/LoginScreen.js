@@ -1,26 +1,152 @@
-import React, { useState } from 'react'
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-  ActivityIndicator,
-} from 'react-native'
-import { useNavigation } from '@react-navigation/native'
-import authService from '../services/auth'
-import { COLORS } from '../utils/constants'
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Picker } from '@react-native-picker/picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL, ROLES } from '../config/api';
 
-export default function LoginScreen({ onLogin, route }) {
-  const navigation = useNavigation()
-  const { roleName, registerRoute } = route?.params || {}
+export default function LoginScreen({ navigation }) {
+  const [role, setRole] = useState('field_worker');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const [identifier, setIdentifier] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
+  const handleLogin = async () => {
+    if (!phone.trim() || !password.trim()) {
+      Alert.alert('Error', 'Phone and password are required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: phone.trim(), password })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Login Failed', data.error || 'Invalid credentials');
+        return;
+      }
+
+      // Save token
+      await AsyncStorage.setItem('auth_token', data.token);
+      await AsyncStorage.setItem('user', JSON.stringify(data.user));
+
+      // Navigate to home
+      navigation.replace('Home');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = () => {
+    navigation.navigate('Register', { role });
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#0f172a' }}>
+      <ScrollView style={{ flex: 1, padding: 20 }}>
+        <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 30, textAlign: 'center' }}>
+          GeoGuard
+        </Text>
+
+        {/* Role Selection */}
+        <Text style={{ fontSize: 14, color: '#94a3b8', marginBottom: 8 }}>Select Role</Text>
+        <View style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 8, overflow: 'hidden', marginBottom: 20 }}>
+          <Picker
+            selectedValue={role}
+            onValueChange={setRole}
+            style={{ color: '#e2e8f0', backgroundColor: '#1e293b' }}
+          >
+            {ROLES.map((r) => (
+              <Picker.Item key={r} label={r.replace('_', ' ').toUpperCase()} value={r} />
+            ))}
+          </Picker>
+        </View>
+
+        {/* Phone Input */}
+        <Text style={{ fontSize: 14, color: '#94a3b8', marginBottom: 8 }}>Phone Number</Text>
+        <TextInput
+          value={phone}
+          onChangeText={setPhone}
+          placeholder="+91 98765 43210"
+          placeholderTextColor="#64748b"
+          keyboardType="phone-pad"
+          style={{
+            backgroundColor: '#1e293b',
+            borderWidth: 1,
+            borderColor: '#334155',
+            borderRadius: 8,
+            padding: 12,
+            color: '#e2e8f0',
+            marginBottom: 20,
+            fontSize: 16
+          }}
+        />
+
+        {/* Password Input */}
+        <Text style={{ fontSize: 14, color: '#94a3b8', marginBottom: 8 }}>Password</Text>
+        <TextInput
+          value={password}
+          onChangeText={setPassword}
+          placeholder="••••••••"
+          placeholderTextColor="#64748b"
+          secureTextEntry
+          style={{
+            backgroundColor: '#1e293b',
+            borderWidth: 1,
+            borderColor: '#334155',
+            borderRadius: 8,
+            padding: 12,
+            color: '#e2e8f0',
+            marginBottom: 30,
+            fontSize: 16
+          }}
+        />
+
+        {/* Login Button */}
+        <TouchableOpacity
+          onPress={handleLogin}
+          disabled={loading}
+          style={{
+            backgroundColor: '#01C88D',
+            padding: 14,
+            borderRadius: 8,
+            marginBottom: 16,
+            alignItems: 'center'
+          }}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={{ color: '#0f172a', fontWeight: 'bold', fontSize: 16 }}>Login</Text>
+          )}
+        </TouchableOpacity>
+
+        {/* Register Button */}
+        <TouchableOpacity
+          onPress={handleRegister}
+          style={{
+            backgroundColor: 'transparent',
+            borderWidth: 1,
+            borderColor: '#01C88D',
+            padding: 14,
+            borderRadius: 8,
+            alignItems: 'center'
+          }}
+        >
+          <Text style={{ color: '#01C88D', fontWeight: 'bold', fontSize: 16 }}>Create Account</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
 
   const handleLogin = async () => {
     if (!identifier || !password) {

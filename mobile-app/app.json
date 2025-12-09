@@ -37,8 +37,8 @@
       "eas": {
         "projectId": "your-project-id-here"
       },
-      "apiUrl": "http://10.0.2.2:4000/api",
-      "socketUrl": "ws://10.0.2.2:4000"
+      "apiUrl": "http://10.0.75.150:4000/api",
+      "socketUrl": "ws://10.0.75.150:4000"
     },
     "plugins": [
       "expo-font"
