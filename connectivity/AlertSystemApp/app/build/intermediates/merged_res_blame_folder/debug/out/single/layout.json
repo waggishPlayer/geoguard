@@ -1,0 +1,22 @@
+[
+    {
+        "merged": "com.alertsystem.app-mergeDebugResources-36:/layout/activity_main.xml",
+        "source": "com.alertsystem.app-main-39:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.alertsystem.app-mergeDebugResources-36:/layout/activity_dashboard.xml",
+        "source": "com.alertsystem.app-main-39:/layout/activity_dashboard.xml"
+    },
+    {
+        "merged": "com.alertsystem.app-mergeDebugResources-36:/layout/item_alert_log.xml",
+        "source": "com.alertsystem.app-main-39:/layout/item_alert_log.xml"
+    },
+    {
+        "merged": "com.alertsystem.app-mergeDebugResources-36:/layout/activity_siren.xml",
+        "source": "com.alertsystem.app-main-39:/layout/activity_siren.xml"
+    },
+    {
+        "merged": "com.alertsystem.app-mergeDebugResources-36:/layout/activity_worker.xml",
+        "source": "com.alertsystem.app-main-39:/layout/activity_worker.xml"
+    }
+]

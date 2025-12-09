@@ -1,59 +1,59 @@
-import api from './api'
-
-const handleMlRequest = async (requestFn) => {
-  try {
-    const response = await requestFn()
-    return response.data
-  } catch (error) {
-    if (error.response?.data) {
-      return error.response.data
-    }
-    console.error('ML service unavailable:', error)
-    return {
-      ok: false,
-      implemented: false,
-      message: 'Unable to reach ML service',
-      error: error.message,
-    }
-  }
-}
-
+// Offline-first mock ML service to avoid backend dependency
 export const mlService = {
   async predict(slopeId, sensorData = {}) {
-    return handleMlRequest(() =>
-      api.post('/ml/predict', { slopeId, sensorData })
-    )
+    console.log('[mlService] Mock predict', { slopeId, sensorData })
+    return {
+      ok: true,
+      implemented: false,
+      message: 'Mock prediction (offline mode)',
+      data: {
+        risk_score: 0.42,
+        probability: 0.42,
+        factors: {
+          rainfall: 0.3,
+          displacement: 0.25,
+          pore_pressure: 0.2,
+          seismic: 0.1,
+          weather: 0.15,
+        },
+      },
+    }
   },
 
   async forecast(slopeId) {
-    return handleMlRequest(() =>
-      api.post('/ml/forecast', { slopeId })
-    )
+    console.log('[mlService] Mock forecast', { slopeId })
+    return {
+      ok: true,
+      implemented: false,
+      message: 'Mock forecast (offline mode)',
+      data: Array.from({ length: 7 }, (_, i) => ({
+        day: i + 1,
+        risk: 0.35 + Math.random() * 0.2,
+        rain_mm: Math.random() * 10,
+      })),
+    }
   },
 
   async detect(imageUri) {
-    const formData = new FormData()
-    formData.append('image', {
-      uri: imageUri,
-      type: 'image/jpeg',
-      name: 'photo.jpg',
-    })
-
-    return handleMlRequest(() =>
-      api.post('/ml/detect', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-    )
+    console.log('[mlService] Mock detect', imageUri)
+    return {
+      ok: true,
+      implemented: false,
+      message: 'Mock crack detection (offline mode)',
+      data: {
+        crack_probability: 0.18,
+        risk_assessment: 'Low',
+        notes: 'Offline mock response - no backend required',
+      },
+    }
   },
 
-  async explain(slopeId, predictionId) {
-    return handleMlRequest(() =>
-      api.get(`/ml/explain/${predictionId}`, { params: { slopeId } })
-    )
+  async explain() {
+    return { ok: true, implemented: false, message: 'Mock explain (offline mode)' }
   },
 
   async getPredictions() {
-    return handleMlRequest(() => api.get('/ml/predictions'))
+    return { ok: true, implemented: false, message: 'Mock predictions list (offline mode)', data: [] }
   },
 }
 

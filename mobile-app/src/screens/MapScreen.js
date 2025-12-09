@@ -5,22 +5,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import { COLORS } from '../utils/constants';
 import { StatusBadge } from '../components/StatusBadge';
-import { calculateRiskGrid } from '../services/RiskEngine';
+import { calculateRiskGrid, setManualWeatherMode, updateManualWeather, generateRiskExplanation } from '../services/RiskEngine';
+import AlertTriggerService from '../services/AlertTriggerService';
+import AlertModal from '../components/AlertModal';
 
 // Theme mapping
 const Colors = {
-  background: '#0f172a',
-  surface: '#1e293b',
+  background: COLORS.background,
+  surface: COLORS.surface,
   primary: COLORS.primary,
-  textPrimary: '#f8fafc',
-  textSecondary: '#94a3b8',
-  border: '#334155',
-  borderLight: '#475569',
-  riskImminent: '#7a0019',
-  riskHigh: '#d62728',
-  riskMedium: '#ff7f0e',
-  riskLow: '#2ca02c',
+  textPrimary: COLORS.text,
+  textSecondary: COLORS.textSecondary,
+  border: COLORS.border,
+  borderLight: COLORS.divider,
+  riskImminent: COLORS.danger,
+  riskHigh: COLORS.high || '#FF5722', // Fallback if not directly in COLORS root
+  riskMedium: COLORS.warning,
+  riskLow: COLORS.success,
   emergency: COLORS.danger,
+  surfaceNeutral: COLORS.surfaceNeutral || COLORS.surface,
 };
 
 const Spacing = { sm: 8, md: 16, lg: 24 };
@@ -33,24 +36,45 @@ const Typography = {
 
 // Helper functions for risk assessment
 const getRiskColor = (score) => {
-  if (score >= 0.75) return '#7a0019'; // Danger
-  if (score >= 0.60) return '#d62728'; // High
-  if (score >= 0.35) return '#ff7f0e'; // Medium
-  return '#2ca02c';                    // Low
+  if (score >= 0.9) return Colors.riskImminent; // Critical
+  if (score >= 0.75) return Colors.riskHigh;    // High
+  if (score >= 0.60) return Colors.riskMedium;  // Medium
+  return Colors.riskLow;                        // Low
 };
 
 const getRiskLevel = (score) => {
-  if (score >= 0.75) return 'Danger';
-  if (score >= 0.60) return 'High';
-  if (score >= 0.35) return 'Medium';
+  if (score >= 0.9) return 'Critical';
+  if (score >= 0.75) return 'High';
+  if (score >= 0.60) return 'Medium';
   return 'Low';
 };
+
+import { weatherService } from '../services/weather'
 
 export default function MapScreen({ navigation }) {
   const [selectedCell, setSelectedCell] = useState(null);
   const [heatmapData, setHeatmapData] = useState([]);
   const [filterLevel, setFilterLevel] = useState('all');
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [weather, setWeather] = useState(null);
+  const [manualMode, setManualMode] = useState(false);
+  const [showWeatherControls, setShowWeatherControls] = useState(false);
+  const [manualWeather, setManualWeather] = useState({
+    wind_speed: 10.0,
+    sun: 0.5,
+    rain_mm: 0.0,
+    humidity: 60.0,
+    temperature: 28.0
+  });
+  const [weatherData, setWeatherData] = useState(null);
+  
+  // Alert system state
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [currentAlert, setCurrentAlert] = useState(null);
+  const [alertStatus, setAlertStatus] = useState('disconnected');
+  const [activeDangerZones, setActiveDangerZones] = useState([]);
+  const [testAlertTriggered, setTestAlertTriggered] = useState(false);
+  const [mlEnabled, setMlEnabled] = useState(false);
 
   const webviewRef = React.useRef(null);
 
@@ -63,11 +87,80 @@ export default function MapScreen({ navigation }) {
 
   React.useEffect(() => {
     loadData();
+    loadWeather();
+    initializeAlertSystem();
     const interval = setInterval(loadData, 5000); // Sync with backend every 5s
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      AlertTriggerService.disconnect();
+    };
   }, []);
 
-  // Inject data into WebView when it changes
+  const loadWeather = async () => {
+    const data = await weatherService.getCurrentWeather()
+    setWeather(data)
+  }
+
+  // Initialize alert system
+  const initializeAlertSystem = async () => {
+    try {
+      await AlertTriggerService.initialize('site_admin_dev', ['Unit-1', 'Unit-2', 'Unit-3', 'Unit-4']);
+      setAlertStatus('connected');
+      console.log('✅ Alert system initialized');
+
+      // Listen for incoming alerts
+      AlertTriggerService.onAlert((alert) => {
+        console.log('Alert received:', alert);
+        setCurrentAlert(alert);
+        setAlertVisible(true);
+      });
+
+      // Listen for siren activation
+      AlertTriggerService.onSirenActivated((data) => {
+        console.log('🚨 SIREN ACTIVATED:', data);
+        // In a real app, would trigger actual siren device
+        setCurrentAlert({
+          ...data,
+          isSiren: true,
+          message: 'SIREN ACTIVATED - All field workers must evacuate immediately!'
+        });
+        setAlertVisible(true);
+      });
+
+      // Listen for siren cancellation
+      AlertTriggerService.onSirenCancelled((data) => {
+        console.log('Siren cancelled:', data);
+        setAlertVisible(false);
+      });
+
+      // Listen for connection changes
+      AlertTriggerService.onConnectionChange((isConnected) => {
+        setAlertStatus(isConnected ? 'connected' : 'disconnected');
+      });
+    } catch (error) {
+      console.error('Failed to initialize alert system:', error);
+      setAlertStatus('error');
+    }
+  };
+
+  // Check risk data for danger zones and trigger alerts
+  React.useEffect(() => {
+    if (heatmapData.length > 0 && alertStatus === 'connected') {
+      AlertTriggerService.checkAndTriggerAlerts(heatmapData, weatherData);
+      const status = AlertTriggerService.getStatus();
+      setActiveDangerZones(status.activeDangerZones);
+    }
+  }, [heatmapData, alertStatus]);
+
+  // Handle alert acknowledgment
+  const handleAlertAcknowledge = (alertId, workerId) => {
+    AlertTriggerService.acknowledgeAlert(alertId, workerId);
+  };
+
+  // Handle manual alert trigger (for testing)
+  const triggerTestAlert = (zone = 'Unit-3', severity = 3) => {
+    AlertTriggerService.triggerManualAlert(zone, severity);
+  };
   React.useEffect(() => {
     if (webviewRef.current && heatmapData.length > 0) {
       const jsonCells = JSON.stringify(filteredCells);
@@ -78,15 +171,47 @@ export default function MapScreen({ navigation }) {
 
   const loadData = async () => {
     try {
+      console.log('🔄 Loading risk grid data...');
       // Fetch the robust grid from the local engine
       const data = await calculateRiskGrid();
+      console.log(`✅ Risk grid calculated: ${data?.grid?.length || 0} cells, max risk: ${data?.stats?.max_risk?.toFixed(2) || 'N/A'}, ML: ${data?.ml_enabled ? 'ON' : 'OFF'}`);
       if (data && data.grid) {
         setHeatmapData(data.grid);
+        setWeatherData(data.weather_data);
+        setMlEnabled(data.ml_enabled || false);
+        console.log(`📊 Heatmap updated with ${data.grid.length} cells`);
       } else {
         console.warn("Received empty grid data");
       }
     } catch (error) {
       console.error("Failed to load map grid:", error);
+    }
+  };
+
+  const handleWeatherChange = (key, value) => {
+    const updated = { ...manualWeather, [key]: value };
+    setManualWeather(updated);
+    updateManualWeather(updated);
+    // Trigger immediate recalculation
+    setTimeout(loadData, 300);
+  };
+
+  const adjustWeather = (key, delta, min, max) => {
+    const next = Math.min(max, Math.max(min, manualWeather[key] + delta));
+    handleWeatherChange(key, next);
+  };
+
+  const toggleManualMode = () => {
+    const newMode = !manualMode;
+    setManualMode(newMode);
+    setManualWeatherMode(newMode);
+    if (newMode) {
+      updateManualWeather(manualWeather);
+      setShowWeatherControls(true);
+      setTimeout(loadData, 200);
+    } else {
+      setShowWeatherControls(false);
+      loadData(); // Reload with live data
     }
   };
 
@@ -98,7 +223,7 @@ export default function MapScreen({ navigation }) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    body { margin: 0; padding: 0; background-color: #0f172a; }
+    body { margin: 0; padding: 0; background-color: ${COLORS.background}; }
     #map { height: 100vh; width: 100vw; }
     .leaflet-control-attribution { display: none; }
   </style>
@@ -121,10 +246,10 @@ export default function MapScreen({ navigation }) {
     let gridLayer = L.layerGroup().addTo(map);
 
     function getRiskColor(score) {
-      if (score >= 0.75) return '#7a0019'; // Imminent
-      if (score >= 0.60) return '#d62728'; // High
-      if (score >= 0.35) return '#ff7f0e'; // Medium
-      return '#2ca02c';                 // Low
+      if (score >= 0.9) return '${COLORS.danger}'; // Critical
+      if (score >= 0.75) return '${COLORS.high || '#FF5722'}'; // High
+      if (score >= 0.60) return '${COLORS.warning}'; // Moderate
+      return '${COLORS.success}';                 // Low
     }
 
     // Function to update map data
@@ -156,12 +281,12 @@ export default function MapScreen({ navigation }) {
 
     // Add mine boundary marker (Visual Anchor)
     L.circle([11.1053, 79.1506], {
-      color: '#fff',
+      color: '${COLORS.mapSlopeBoundary || '#2B9CEF'}',
       fillColor: 'transparent',
       radius: 400,
-      weight: 1,
+      weight: 2,
       dashArray: '10, 10',
-      opacity: 0.5
+      opacity: 0.8
     }).addTo(map);
   </script>
 </body>
@@ -189,31 +314,127 @@ export default function MapScreen({ navigation }) {
         <View style={styles.headerContent}>
           <Text style={styles.title}>Risk Heatmap</Text>
           <Text style={styles.subtitle}>Limestone Mine • 11°06'19"N 79°09'02"E</Text>
+          {weather && (
+            <Text style={styles.weatherBadge}>{weather.temp} • {weather.rain}</Text>
+          )}
         </View>
+
         <View style={styles.backBtn} />
       </View>
 
       {/* Statistics Bar */}
       <View style={styles.statsBar}>
+        <TouchableOpacity 
+          style={[styles.manualModeBtn, manualMode && styles.manualModeBtnActive]}
+          onPress={toggleManualMode}
+        >
+          <Text style={[styles.manualModeBtnText, manualMode && styles.manualModeBtnTextActive]}>
+            {manualMode ? '🎮 Manual' : '🌐 Live'}
+          </Text>
+        </TouchableOpacity>
+        {manualMode && (
+          <TouchableOpacity 
+            style={styles.weatherControlBtn}
+            onPress={() => setShowWeatherControls(!showWeatherControls)}
+          >
+            <Text style={styles.weatherControlBtnText}>
+              ⚙️ Weather
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Manual Weather Controls */}
+      {manualMode && showWeatherControls && (
+        <View style={styles.weatherControls}>
+          <Text style={styles.weatherControlsTitle}>Manual Weather Conditions</Text>
+  
+          <View style={styles.controlRow}>
+            <Text style={styles.controlLabel}>💨 Wind Speed: {manualWeather.wind_speed.toFixed(1)} km/h</Text>
+            <View style={styles.stepRow}>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => adjustWeather('wind_speed', -2, 0, 60)}><Text style={styles.stepText}>-</Text></TouchableOpacity>
+              <Text style={styles.stepValue}>{manualWeather.wind_speed.toFixed(1)}</Text>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => adjustWeather('wind_speed', 2, 0, 60)}><Text style={styles.stepText}>+</Text></TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.controlRow}>
+            <Text style={styles.controlLabel}>☀️ Sun Intensity: {(manualWeather.sun * 100).toFixed(0)}%</Text>
+            <View style={styles.stepRow}>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => adjustWeather('sun', -0.05, 0, 1)}><Text style={styles.stepText}>-</Text></TouchableOpacity>
+              <Text style={styles.stepValue}>{(manualWeather.sun * 100).toFixed(0)}%</Text>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => adjustWeather('sun', 0.05, 0, 1)}><Text style={styles.stepText}>+</Text></TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.controlRow}>
+            <Text style={styles.controlLabel}>🌧️ Rain: {manualWeather.rain_mm.toFixed(1)} mm/h</Text>
+            <View style={styles.stepRow}>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => adjustWeather('rain_mm', -2, 0, 50)}><Text style={styles.stepText}>-</Text></TouchableOpacity>
+              <Text style={styles.stepValue}>{manualWeather.rain_mm.toFixed(1)} mm</Text>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => adjustWeather('rain_mm', 2, 0, 50)}><Text style={styles.stepText}>+</Text></TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.controlRow}>
+            <Text style={styles.controlLabel}>💧 Humidity: {manualWeather.humidity.toFixed(0)}%</Text>
+            <View style={styles.stepRow}>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => adjustWeather('humidity', -5, 0, 100)}><Text style={styles.stepText}>-</Text></TouchableOpacity>
+              <Text style={styles.stepValue}>{manualWeather.humidity.toFixed(0)}%</Text>
+              <TouchableOpacity style={styles.stepBtn} onPress={() => adjustWeather('humidity', 5, 0, 100)}><Text style={styles.stepText}>+</Text></TouchableOpacity>
+            </View>
+          </View>
+
+          <View style={styles.presetButtons}>
+            <TouchableOpacity style={styles.presetBtn} onPress={() => {
+              const preset = { wind_speed: 5, sun: 0.9, rain_mm: 0, humidity: 40, temperature: 32 };
+              setManualWeather(preset);
+              updateManualWeather(preset);
+              setTimeout(loadData, 300);
+            }}>
+              <Text style={styles.presetBtnText}>☀️ Clear</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.presetBtn} onPress={() => {
+              const preset = { wind_speed: 15, sun: 0.3, rain_mm: 15, humidity: 75, temperature: 26 };
+              setManualWeather(preset);
+              updateManualWeather(preset);
+              setTimeout(loadData, 300);
+            }}>
+              <Text style={styles.presetBtnText}>🌧️ Rainy</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.presetBtn} onPress={() => {
+              const preset = { wind_speed: 45, sun: 0.1, rain_mm: 35, humidity: 90, temperature: 24 };
+              setManualWeather(preset);
+              updateManualWeather(preset);
+              setTimeout(loadData, 300);
+            }}>
+              <Text style={styles.presetBtnText}>⛈️ Storm</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Risk Stats Bar */}
+      <View style={styles.riskStatsBar}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{stats.total}</Text>
-          <Text style={styles.statLabel}>Total Cells</Text>
+          <Text style={styles.statLabel}>Cells</Text>
         </View>
         <View style={[styles.statItem, styles.statDivider]}>
           <Text style={[styles.statValue, { color: Colors.riskImminent }]}>{stats.imminent}</Text>
-          <Text style={styles.statLabel}>Danger</Text>
+          <Text style={styles.statLabel}>🔴 Danger</Text>
         </View>
         <View style={[styles.statItem, styles.statDivider]}>
           <Text style={[styles.statValue, { color: Colors.riskHigh }]}>{stats.high}</Text>
-          <Text style={styles.statLabel}>High</Text>
+          <Text style={styles.statLabel}>🟠 High</Text>
         </View>
         <View style={[styles.statItem, styles.statDivider]}>
           <Text style={[styles.statValue, { color: Colors.riskMedium }]}>{stats.medium}</Text>
-          <Text style={styles.statLabel}>Medium</Text>
+          <Text style={styles.statLabel}>🟡 Med</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: Colors.riskLow }]}>{stats.low}</Text>
-          <Text style={styles.statLabel}>Low</Text>
+          <Text style={styles.statLabel}>🟢 Low</Text>
         </View>
       </View>
 
@@ -292,29 +513,19 @@ export default function MapScreen({ navigation }) {
                 <ScrollView style={styles.detailsScroll}>
                   <View style={styles.detailsGrid}>
                     <View style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>Risk Score</Text>
+                      <Text style={styles.detailLabel}>Live Risk Score</Text>
                       <Text style={[styles.detailValue, { color: getRiskColor(selectedCell.risk_score) }]}>
                         {(selectedCell.risk_score * 100).toFixed(1)}%
                       </Text>
                     </View>
-                    <View style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>Static Risk</Text>
-                      <Text style={styles.detailValue}>
-                        {(selectedCell.static_risk * 100).toFixed(1)}%
-                      </Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>Dynamic Risk</Text>
-                      <Text style={styles.detailValue}>
-                        {(selectedCell.dynamic_risk * 100).toFixed(1)}%
-                      </Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                      <Text style={styles.detailLabel}>Status</Text>
-                      <Text style={styles.detailValue}>
-                        Live
-                      </Text>
-                    </View>
+                  </View>
+
+                  {/* Explainable AI Section */}
+                  <View style={styles.explanationBox}>
+                    <Text style={styles.explanationTitle}>🤖 AI Analysis</Text>
+                    <Text style={styles.explanationText}>
+                      {generateRiskExplanation(selectedCell, weatherData)}
+                    </Text>
                   </View>
 
                   {selectedCell.risk_score >= 0.60 && (
@@ -341,6 +552,24 @@ export default function MapScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Alert Modal */}
+      <AlertModal
+        visible={alertVisible}
+        alert={currentAlert}
+        workerId="site_admin_dev"
+        onAcknowledge={handleAlertAcknowledge}
+        onDismiss={() => setAlertVisible(false)}
+      />
+
+      {/* Alert Status Badge */}
+      {alertStatus === 'connected' && activeDangerZones.length > 0 && (
+        <View style={styles.alertStatusBadge}>
+          <Text style={styles.alertStatusText}>
+            🚨 {activeDangerZones.length} danger zone(s) active
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -381,6 +610,16 @@ const styles = StyleSheet.create({
     fontSize: 9,
     marginTop: 1,
     color: Colors.textSecondary,
+  },
+  weatherBadge: {
+    fontSize: 10,
+    color: Colors.primary,
+    fontWeight: '600',
+    marginTop: 2,
+    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   statsBar: {
     flexDirection: 'row',
@@ -523,5 +762,191 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     lineHeight: 20,
   },
-})
+  closeBtn: {
+    marginTop: Spacing.md,
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  closeBtnText: {
+    ...Typography.body,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  manualModeBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.surfaceNeutral,
+    marginRight: 8,
+  },
+  manualModeBtnActive: {
+    backgroundColor: Colors.primary,
+  },
+  manualModeBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  manualModeBtnTextActive: {
+    color: '#fff',
+  },
+  weatherControlBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: Colors.surfaceNeutral,
+  },
+  weatherControlBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  weatherControls: {
+    backgroundColor: Colors.surface,
+    padding: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  weatherControlsTitle: {
+    ...Typography.body,
+    fontWeight: 'bold',
+    marginBottom: Spacing.md,
+    color: Colors.primary,
+  },
+  controlRow: {
+    marginBottom: Spacing.md,
+  },
+  controlLabel: {
+    ...Typography.caption,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  stepBtn: {
+    width: 40,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: Colors.surfaceNeutral,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 4,
+  },
+  stepText: {
+    ...Typography.h3,
+    color: Colors.textPrimary,
+    fontSize: 18,
+  },
+  stepValue: {
+    ...Typography.body,
+    fontWeight: '700',
+    flex: 1,
+    textAlign: 'center',
+    color: Colors.textPrimary,
+    marginHorizontal: 8,
+  },
+  presetButtons: {
+    flexDirection: 'row',
+    marginTop: Spacing.sm,
+  },
+  presetBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    backgroundColor: Colors.surfaceNeutral,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  presetBtnText: {
+    ...Typography.caption,
+    fontWeight: '600',
+  },
+  explanationBox: {
+    marginTop: Spacing.md,
+    padding: Spacing.md,
+    backgroundColor: Colors.background,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  explanationTitle: {
+    ...Typography.body,
+    fontWeight: 'bold',
+    color: Colors.primary,
+    marginBottom: 8,
+  },
+  explanationText: {
+    ...Typography.caption,
+    lineHeight: 18,
+    color: Colors.textPrimary,
+  },
+  alertStatusBadge: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: '#FF1744',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  alertStatusText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  mlStatusBadge: {
+    position: 'absolute',
+    top: 80,
+    right: 20,
+    backgroundColor: '#6B7280',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    opacity: 0.9,
+  },
+  mlStatusBadgeActive: {
+    backgroundColor: '#10B981',
+  },
+  mlStatusText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  alertBtn: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: Spacing.md,
+  },
+  alertBtnActive: {
+    backgroundColor: Colors.danger,
+    transform: [{ scale: 0.95 }],
+  },
+  alertBtnText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  riskStatsBar: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surface,
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.sm,
+    justifyContent: 'space-around',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+});
+
 

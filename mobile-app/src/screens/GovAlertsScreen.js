@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView } from 'react-native'
 import { alertsService } from '../services/alerts'
-import { authService } from '../services/auth'
+import authService from '../services/auth'
 import { COLORS } from '../utils/constants'
 
 export default function GovAlertsScreen() {

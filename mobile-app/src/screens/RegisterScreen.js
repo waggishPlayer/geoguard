@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
-import { authService } from '../services/auth'
+import authService from '../services/auth'
 import { COLORS } from '../utils/constants'
 import { Picker } from '@react-native-picker/picker'
 

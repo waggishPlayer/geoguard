@@ -1,10 +1,13 @@
+
 import React, { useState, useEffect } from 'react'
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native'
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Image } from 'react-native'
 import { COLORS } from '../utils/constants'
-import api from '../services/api'
+import { weatherService } from '../services/weather'
+import { getCharts } from './chartData'
 
 export default function ClimateScreen() {
     const [refreshing, setRefreshing] = useState(false)
+    const [chartData, setChartData] = useState(null)
     const [weather, setWeather] = useState({
         temp: '28°C',
         humidity: '65%',
@@ -17,21 +20,22 @@ export default function ClimateScreen() {
         ]
     })
 
+    // ...
+
     const loadData = async () => {
         try {
-            // In a real app, we'd fetch from a weather API or our sensors
-            // For now, we'll try to get rain data from our sensors if available
-            const sensorsRes = await api.get('/sensors')
-            const sensors = sensorsRes.data.data
-            const rainSensor = sensors?.find(s => s.sensor_type === 'rain_gauge')
-
-            if (rainSensor) {
-                const readingsRes = await api.get(`/sensors/${rainSensor.id}/readings`)
-                const readings = readingsRes.data.data
-                if (readings && readings.length > 0) {
-                    setWeather(prev => ({ ...prev, rain: `${readings[0].value} mm` }))
-                }
-            }
+            const data = await weatherService.getCurrentWeather()
+            setWeather({
+                temp: data.temp,
+                humidity: data.humidity,
+                wind: data.wind,
+                rain: data.rain,
+                forecast: data.forecast
+            })
+            
+            // Load charts
+            const charts = await getCharts()
+            setChartData(charts)
         } catch (error) {
             console.warn('Failed to load climate data', error)
         }
@@ -85,6 +89,28 @@ export default function ClimateScreen() {
                         <Text style={styles.forecastTemp}>{day.temp}</Text>
                     </View>
                 ))}
+            </View>
+
+            <Text style={styles.sectionTitle}>📊 Real-Time Risk Assessment</Text>
+            <View style={styles.chartContainer}>
+                {chartData?.riskAssessment && (
+                    <Image
+                        source={{ uri: chartData.riskAssessment }}
+                        style={styles.chartImage}
+                        resizeMode="contain"
+                    />
+                )}
+            </View>
+
+            <Text style={styles.sectionTitle}>🌤️ Real Weather Simulation</Text>
+            <View style={styles.chartContainer}>
+                {chartData?.weatherSimulation && (
+                    <Image
+                        source={{ uri: chartData.weatherSimulation }}
+                        style={styles.chartImage}
+                        resizeMode="contain"
+                    />
+                )}
             </View>
 
             <View style={styles.alertCard}>
@@ -207,5 +233,20 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: COLORS.text,
         lineHeight: 20,
+    },
+    chartContainer: {
+        backgroundColor: COLORS.surface,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: COLORS.border,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 300,
+    },
+    chartImage: {
+        width: '100%',
+        height: 300,
     },
 })

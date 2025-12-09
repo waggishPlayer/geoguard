@@ -11,29 +11,47 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
-import { authService } from '../services/auth'
+import authService from '../services/auth'
 import { COLORS } from '../utils/constants'
 
-export default function LoginScreen({ onLogin }) {
+export default function LoginScreen({ onLogin, route }) {
   const navigation = useNavigation()
-  const [email, setEmail] = useState('')
+  const { roleName, registerRoute } = route?.params || {}
+
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Validation', 'Email and password are required')
+    if (!identifier || !password) {
+      Alert.alert('Validation', 'Email/Phone and password are required')
       return
     }
 
     setLoading(true)
     try {
-      const result = await authService.login(email, password)
+      // Determine if input is email or phone
+      const isEmail = identifier.includes('@')
+      const result = await authService.login(
+        isEmail ? identifier : null,
+        password,
+        isEmail ? null : identifier
+      )
+
       if (result.success) {
-        onLogin?.(result.data)
+        onLogin?.(result.token, result.data)
       }
     } catch (error) {
-      Alert.alert('Login Failed', error.message || 'Invalid credentials')
+      const msg = error.response?.data?.message || 'Login failed'
+      const approvalStatus = error.response?.data?.approval_status
+
+      if (approvalStatus === 'pending') {
+        Alert.alert('Account Pending', 'Your account is awaiting approval from an administrator.')
+      } else if (approvalStatus === 'rejected') {
+        Alert.alert('Account Rejected', 'Your account registration was rejected.')
+      } else {
+        Alert.alert('Error', msg)
+      }
     } finally {
       setLoading(false)
     }
@@ -41,22 +59,28 @@ export default function LoginScreen({ onLogin }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
     >
       <View style={styles.content}>
-        <Text style={styles.title}>GeoGuard</Text>
-        <Text style={styles.subtitle}>Mine Safety & Monitoring</Text>
+        <View style={styles.header}>
+          <Text style={styles.title}>
+            {roleName ? `${roleName} Login` : 'GeoGuard'}
+          </Text>
+          <Text style={styles.subtitle}>
+            {roleName ? 'Access your dashboard' : 'AI-Powered Mine Safety'}
+          </Text>
+        </View>
 
         <View style={styles.form}>
           <TextInput
             style={styles.input}
-            placeholder="Email"
+            placeholder="Email or Phone Number"
             placeholderTextColor={COLORS.textSecondary}
-            autoCapitalize="none"
             keyboardType="email-address"
-            value={email}
-            onChangeText={setEmail}
+            autoCapitalize="none"
+            value={identifier}
+            onChangeText={setIdentifier}
             editable={!loading}
           />
 
@@ -77,19 +101,28 @@ export default function LoginScreen({ onLogin }) {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color={COLORS.primary} />
+              <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Login</Text>
+              <Text style={styles.buttonText}>Log In</Text>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.linkButton}
-            onPress={() => navigation.navigate('Register')}
+            onPress={() => {
+              if (registerRoute) {
+                navigation.navigate(registerRoute)
+              } else {
+                navigation.navigate('RoleSelection')
+              }
+            }}
             disabled={loading}
           >
             <Text style={styles.linkText}>
-              Don't have an account? <Text style={styles.linkTextBold}>Register</Text>
+              {registerRoute ? "Don't have an account? " : "Don't have an account? "}
+              <Text style={styles.linkTextBold}>
+                {registerRoute ? 'Register Here' : 'Sign Up'}
+              </Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -145,9 +178,9 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   buttonText: {
-    color: COLORS.primary,
+    color: COLORS.background,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   linkButton: {
     marginTop: 16,

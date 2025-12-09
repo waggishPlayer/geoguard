@@ -1,6 +1,588 @@
 const { query } = require('./db');
 
-/* ============================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+};  }    next(error);    console.error('[Auth] getSlopes error:', error.message);  } catch (error) {    });      data: result.rows || []      success: true,    return res.json({    const result = await getAllSlopes();  try {exports.getSlopes = async (req, res, next) => {};  }    next(error);    console.error('[Auth] getRoles error:', error.message);  } catch (error) {    });      data: result.rows || []      success: true,    return res.json({    const result = await getAllRoles();  try {exports.getRoles = async (req, res, next) => { */ * =================================================================== * 8. UTILITY ENDPOINTS * ===================================================================/**};  }    next(error);    console.error('[Auth] deleteWorker error:', error.message);  } catch (error) {    });      message: 'Worker deleted successfully'      success: true,    return res.json({    }      return res.status(404).json({ success: false, message: 'Worker not found' });    if (result.rows.length === 0) {    const result = await deleteUser(id);    }      return res.status(400).json({ success: false, message: 'Worker ID is required' });    if (!id) {    const { id } = req.params;  try {exports.deleteWorker = async (req, res, next) => {};  }    next(error);    console.error('[Auth] listWorkers error:', error.message);  } catch (error) {    });      data: result.rows || []      success: true,    return res.json({    const result = await getWorkersBySlope(slopeId);    }      return res.status(400).json({ success: false, message: 'Must be assigned to a mine' });    if (!slopeId) {    const slopeId = req.user.slope_id;  try {exports.listWorkers = async (req, res, next) => {};  }    next(error);    console.error('[Auth] rejectUserRequest error:', error.message);  } catch (error) {    });      data: sanitizeUser(result.rows[0])      message: 'User rejected successfully',      success: true,    return res.json({    }      return res.status(404).json({ success: false, message: 'User not found' });    if (result.rows.length === 0) {    const result = await rejectUser(user_id);    }      return res.status(400).json({ success: false, message: 'User ID is required' });    if (!user_id) {    const { user_id } = req.body;  try {exports.rejectUserRequest = async (req, res, next) => {};  }    next(error);    console.error('[Auth] approveUserRequest error:', error.message);  } catch (error) {    });      data: sanitizeUser(result.rows[0])      message: 'User approved successfully',      success: true,    return res.json({    }      return res.status(404).json({ success: false, message: 'User not found' });    if (result.rows.length === 0) {    const result = await approveUser(user_id);    }      return res.status(400).json({ success: false, message: 'User ID is required' });    if (!user_id) {    const { user_id } = req.body;  try {exports.approveUserRequest = async (req, res, next) => {};  }    next(error);    console.error('[Auth] listPendingUsers error:', error.message);  } catch (error) {    });      data: result.rows || []      success: true,    return res.json({    const result = await getPendingUsers();  try {exports.listPendingUsers = async (req, res, next) => { */ * =================================================================== * 7. SUPER ADMIN FUNCTIONS * ===================================================================/**};  }    next(error);    console.error('[Auth] inviteWorker error:', error.message);  } catch (error) {    });      message: `Invitation sent to ${phone}`      success: true,    return res.json({    await createWorkerInvite(phone, slopeId, adminId);    // Create invite    }      return res.status(400).json({ success: false, message: 'Admin must be assigned to a mine' });    if (!slopeId) {    }      return res.status(400).json({ success: false, message: 'Phone number is required' });    if (!phone) {    const slopeId = req.user.slope_id;    const adminId = req.user.id;    const { phone } = req.body;  try {exports.inviteWorker = async (req, res, next) => { */ * =================================================================== * 6. WORKER INVITATION (Site Admin Only) * ===================================================================/**};  }    next(error);    console.error('[Auth] updateProfile error:', error.message);  } catch (error) {    });      data: updatedUser      message: 'Profile updated successfully',      success: true,    return res.json({    const updatedUser = sanitizeUser(updatedResult.rows[0]);    const updatedResult = await updateUserProfile(req.user.id, name, phone);    // Update profile    }      await updateUserPassword(req.user.id, passwordHash);      const passwordHash = await bcrypt.hash(newPassword, 10);      }        return res.status(400).json({ success: false, message: 'Current password is incorrect' });      if (!isValid) {      const isValid = await bcrypt.compare(currentPassword, userResult.rows[0].password_hash);      }        return res.status(400).json({ success: false, message: 'Current password required to change password' });      if (!currentPassword) {    if (newPassword) {    // If changing password, verify current password    }      return res.status(404).json({ success: false, message: 'User not found' });    if (userResult.rows.length === 0) {    const userResult = await getUserById(req.user.id);    const { name, phone, currentPassword, newPassword } = req.body;  try {exports.updateProfile = async (req, res, next) => {};  }    next(error);    console.error('[Auth] getProfile error:', error.message);  } catch (error) {    return res.json({ success: true, data: user });    const user = sanitizeUser(userResult.rows[0]);    }      return res.status(404).json({ success: false, message: 'User not found' });    if (userResult.rows.length === 0) {    const userResult = await getUserById(req.user.id);  try {exports.getProfile = async (req, res, next) => { */ * =================================================================== * 5. PROFILE MANAGEMENT * ===================================================================/**};  }    next(error);    console.error('[Auth] login error:', error.message);  } catch (error) {    });      }        is_approved: user.is_approved        slope_id: user.slope_id,        role_name: roleName,        role_id: user.role_id,        phone: user.phone,        email: user.email,        name: user.name,        id: user.id,      data: {      token,      message: `${roleName} login successful`,      success: true,    return res.json({    const token = createToken(user.id, user.email, user.role_id, user.slope_id);    // Generate token    }      });        approval_status: user.approval_status || 'pending'        message: 'Account pending approval',        success: false,      return res.status(403).json({    if (roleName !== 'super_admin' && !user.is_approved) {    // Check approval status (super_admin doesn't need approval)    const roleName = roleResult.rows.length > 0 ? roleResult.rows[0].name : null;    const roleResult = await getRoleById(user.role_id);    // Get user role    }      return res.status(401).json({ success: false, message: 'Invalid credentials' });    if (!passwordMatch) {    const passwordMatch = await bcrypt.compare(password, user.password_hash);    // Verify password    const user = userResult.rows[0];    }      return res.status(401).json({ success: false, message: 'Invalid credentials' });    if (userResult.rows.length === 0) {    }      userResult = await getUserByPhone(phone);    } else {      userResult = await getUserByEmail(email);    if (email) {    let userResult;    // Get user by email or phone    }      return res.status(400).json({ success: false, message: 'Email or phone is required' });    if (!email && !phone) {    }      return res.status(400).json({ success: false, message: 'Password is required' });    if (!password) {    const { email, phone, password } = req.body;  try {exports.login = async (req, res, next) => { */ * =================================================================== * 4. LOGIN (All Profiles) * ===================================================================/**};  }    next(error);    console.error('[Auth] registerGov error:', error.message);  } catch (error) {    });      }        approval_status: newUser.approval_status        role_name: 'gov_authority',        email: newUser.email,        id: newUser.id,      data: {      message: 'Government Authority registration successful. Pending Super Admin approval.',      success: true,    return res.status(201).json({    await createGovAuthority(newUser.id, department, 'Default Region');    // Create govt authority record    }      await updateUserDocs(newUser.id, govt_id_url, null);    if (govt_id_url) {    // Store govt ID document    const newUser = newUserRes.rows[0];    const newUserRes = await createUser(govRole.id, name, email, phone, passwordHash, slopeId);    // Create user (pending approval)    const slopeId = (slope_ids && slope_ids.length > 0) ? slope_ids[0] : null;    // Assign to a slope if provided    const passwordHash = await bcrypt.hash(password, salt);    const salt = await bcrypt.genSalt(10);    // Hash password    }      throw new Error('gov_authority role not found in database');    if (!govRole) {    const govRole = roles.rows.find(r => r.name === 'gov_authority');    const roles = await getAllRoles();    // Get gov_authority role    }      return res.status(400).json({ success: false, message: 'Email already registered' });    if (existing.rows.length > 0) {    const existing = await getUserByEmail(email);    // Check if email exists    }      return res.status(400).json({ success: false, message: 'Name, email, password, phone, and department are required' });    if (!name || !email || !password || !phone || !department) {    // Validate input    const { name, email, password, phone, department, govt_id_url, slope_ids } = req.body;  try {exports.registerGov = async (req, res, next) => { */ * =================================================================== * 3. GOVERNMENT AUTHORITY REGISTRATION & LOGIN * ===================================================================/**};  }    next(error);    console.error('[Auth] registerSiteAdmin error:', error.message);  } catch (error) {    });      }        approval_status: newUser.approval_status        role_name: 'site_admin',        email: newUser.email,        id: newUser.id,      data: {      message: 'Site Admin registration successful. Pending Super Admin approval.',      success: true,    return res.status(201).json({    }      await updateUserDocs(newUser.id, null, company_id_url);    if (company_id_url) {    // Store company ID document URL if provided    const newUser = newUserRes.rows[0];    const newUserRes = await createUser(adminRole.id, name, email, phone, passwordHash, slopeId);    // Create user (pending approval)    }      return res.status(400).json({ success: false, message: 'mine_action must be "create" or "join"' });    } else {      slopeId = existingSlopeId;      }        return res.status(404).json({ success: false, message: 'Slope not found' });      if (slopeRes.rows.length === 0) {      const slopeRes = await getSlopeById(existingSlopeId);      }        return res.status(400).json({ success: false, message: 'Slope ID required to join' });      if (!existingSlopeId) {      const existingSlopeId = mine_details?.existing_slope_id;    } else if (mine_action === 'join') {      await createDefaultSensors(slopeId);      slopeId = slopeRes.rows[0].id;      const slopeRes = await createSlope(mineName, description || '', lat, lng);      }        });          message: 'Mine name and coordinates (lat, lng) are required'          success: false,        return res.status(400).json({      if (!mineName || !lat || !lng) {      const { name: mineName, lat, lng, description } = mine_details;    if (mine_action === 'create') {    let slopeId = null;    // Handle mine creation or joining    const passwordHash = await bcrypt.hash(password, salt);    const salt = await bcrypt.genSalt(10);    // Hash password    }      throw new Error('site_admin role not found in database');    if (!adminRole) {    const adminRole = roles.rows.find(r => r.name === 'site_admin');    const roles = await getAllRoles();    // Get site_admin role    }      return res.status(400).json({ success: false, message: 'Email already registered' });    if (existing.rows.length > 0) {    const existing = await getUserByEmail(email);    // Check if email already exists    }      return res.status(400).json({ success: false, message: 'Name, email, password, and phone are required' });    if (!name || !email || !password || !phone) {    // Validate input    const { name, email, password, phone, company_id_url, mine_action, mine_details } = req.body;  try {exports.registerSiteAdmin = async (req, res, next) => { */ * =================================================================== * 2. SITE ADMIN REGISTRATION & LOGIN * ===================================================================/**};  }    next(error);    console.error('[Auth] registerWorker error:', error.message);  } catch (error) {    });      }        is_approved: true        slope_id: newUser.slope_id,        role_name: 'field_worker',        role_id: newUser.role_id,        phone: newUser.phone,        email: newUser.email,        name: newUser.name,        id: newUser.id,      data: {      token,      message: 'Field worker registration successful',      success: true,    return res.status(201).json({    const token = createToken(newUser.id, newUser.email, newUser.role_id, newUser.slope_id);    // Generate token    await markWorkerInviteRegistered(invite.id);    await approveUser(newUser.id);    // Auto-approve field workers    const newUser = newUserRes.rows[0];    );      invite.slope_id      passwordHash,      phone,      `${phone}@worker.local`,      name,      workerRole.id,    const newUserRes = await createUser(    // Create user (field workers are auto-approved)    const passwordHash = await bcrypt.hash(password, salt);    const salt = await bcrypt.genSalt(10);    // Hash password    }      throw new Error('field_worker role not found in database');    if (!workerRole) {    const workerRole = roles.rows.find(r => r.name === 'field_worker');    const roles = await getAllRoles();    // Get field_worker role    const invite = inviteRes.rows[0];    }      return res.status(403).json({ success: false, message: 'Phone number not invited. Contact Site Admin.' });    if (inviteRes.rows.length === 0) {    const inviteRes = await getWorkerInviteByPhone(phone);    // Check if phone was invited    }      return res.status(400).json({ success: false, message: 'Phone number already registered' });    if (existing.rows.length > 0) {    const existing = await getUserByPhone(phone);    // Check if phone already registered    }      return res.status(400).json({ success: false, message: 'Invalid OTP' });    if (otp !== '123456') {    // Validate OTP (demo: use 123456)    const { phone, name, password, otp } = req.body;  try {exports.registerWorker = async (req, res, next) => { */ * =================================================================== * 1. FIELD WORKER REGISTRATION & LOGIN * ===================================================================/**};  );    { expiresIn: '24h' }    config.jwtSecret,    { sub: user_id, email, role_id, slope_id },  return jwt.sign(const createToken = (user_id, email, role_id, slope_id) => {};  return rest;  const { password_hash, ...rest } = user;  if (!user) return null;const sanitizeUser = (user) => { */ * =================================================================== * UTILITY FUNCTIONS * ===================================================================/**} = require('../models/queries');  getSlopeById  deleteUser,  updateUserDocs,  getWorkersBySlope,  getPendingUsers,  rejectUser,  approveUser,  markWorkerInviteRegistered,  getWorkerInviteByPhone,  createWorkerInvite,  createDefaultSensors,  getAllSlopes,  createSlope,  getUserById,  updateUserPassword,  updateUserProfile,  createGovAuthority,  getAllRoles,  getRoleByName,  getRoleById,  getUserByPhone,  getUserByEmail,  createUser,const {const config = require('../config/env');/* ============================================================
    ROLES
 ============================================================ */
 const getAllRoles = () => query(`SELECT * FROM roles`);
@@ -18,6 +600,9 @@ const createUser = (role_id, name, email, phone, password_hash, slope_id = null)
 
 const getUserByEmail = (email) =>
   query(`SELECT * FROM users WHERE email = $1`, [email]);
+
+const getUserByPhone = (phone) =>
+  query(`SELECT * FROM users WHERE phone = $1`, [phone]);
 
 const getUserById = (id) =>
   query(`SELECT * FROM users WHERE id = $1`, [id]);
@@ -646,6 +1231,7 @@ module.exports = {
   getRoleByName,
   createUser,
   getUserByEmail,
+  getUserByPhone,
   getUserById,
   getUsersCount,
   getUsersByRole,
@@ -725,5 +1311,69 @@ module.exports = {
     for (const s of sensors) {
       await createSensor(slope_id, s.name, s.type, s.unit);
     }
-  }
+  },
+
+  /* ============================================================
+     AUTH V2 QUERIES
+  ============================================================ */
+  createWorkerInvite: (phone, slope_id, invited_by) =>
+    query(
+      `INSERT INTO worker_invites (phone, slope_id, invited_by)
+       VALUES ($1, $2, $3) RETURNING *`,
+      [phone, slope_id, invited_by]
+    ),
+
+  getWorkerInviteByPhone: (phone) =>
+    query(`SELECT * FROM worker_invites WHERE phone = $1`, [phone]),
+
+  markWorkerInviteRegistered: (id) =>
+    query(`UPDATE worker_invites SET is_registered = TRUE WHERE id = $1`, [id]),
+
+  approveUser: (user_id) =>
+    query(
+      `UPDATE users SET is_approved = TRUE, approval_status = 'approved' WHERE id = $1 RETURNING *`,
+      [user_id]
+    ),
+
+  rejectUser: (user_id) =>
+    query(
+      `UPDATE users SET is_approved = FALSE, approval_status = 'rejected' WHERE id = $1 RETURNING *`,
+      [user_id]
+    ),
+
+  getPendingUsers: () =>
+    query(
+      `SELECT u.*, r.name as role_name 
+       FROM users u 
+       JOIN roles r ON u.role_id = r.id 
+       WHERE u.approval_status = 'pending' 
+       ORDER BY u.created_at DESC`
+    ),
+
+  updateUserDocs: (user_id, govt_id_url, company_id_url) =>
+    query(
+      `UPDATE users 
+       SET govt_id_url = COALESCE($2, govt_id_url), 
+           company_id_url = COALESCE($3, company_id_url) 
+       WHERE id = $1 RETURNING *`,
+      [user_id, govt_id_url, company_id_url]
+    ),
+
+  updateUserDepartment: (user_id, department) =>
+    query(
+      `UPDATE users SET department = $2 WHERE id = $1 RETURNING *`,
+      [user_id, department]
+    ),
+
+  getWorkersBySlope: (slope_id) =>
+    query(
+      `SELECT u.*, r.name as role_name 
+       FROM users u 
+       JOIN roles r ON u.role_id = r.id 
+       WHERE u.slope_id = $1 AND r.name = 'field_worker'
+       ORDER BY u.created_at DESC`,
+      [slope_id]
+    ),
+  deleteUser: (id) =>
+    query(`DELETE FROM users WHERE id = $1 RETURNING *`, [id])
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, Image } from 'react-native'
-import { authService } from '../services/auth'
+import authService from '../services/auth'
 import { COLORS } from '../utils/constants'
 
 export default function ProfileScreen({ navigation, onLogout }) {

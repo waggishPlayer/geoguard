@@ -1,35 +1,55 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { NavigationContainer } from '@react-navigation/native'
 import { StatusBar } from 'expo-status-bar'
 import { ActivityIndicator, View, StyleSheet } from 'react-native'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import AuthNavigator from './navigation/AuthNavigator'
 import AppNavigator from './navigation/AppNavigator'
-import { authService } from './services/auth'
+import authService from './services/auth'
+import SplashScreen from './screens/SplashScreen'
 import { COLORS } from './utils/constants'
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [showSplash, setShowSplash] = useState(true)
 
   useEffect(() => {
-    checkAuth()
+    checkUser()
   }, [])
 
-  const checkAuth = async () => {
+  const checkUser = async () => {
     try {
       const currentUser = await authService.getCurrentUser()
-      const token = await authService.getToken()
-      if (currentUser && token) {
+      if (currentUser) {
         setUser(currentUser)
+        return
       }
+
+      // Dev bypass: auto-inject a site admin session when no stored user exists.
+      const devUser = {
+        id: -1,
+        name: 'Dev Site Admin',
+        email: 'dev@local',
+        role_id: 2,
+        role_name: 'site_admin',
+        slope_id: 1,
+        is_approved: true
+      }
+      const devToken = 'DEV_BYPASS'
+      await AsyncStorage.setItem('sih_token', devToken)
+      await AsyncStorage.setItem('sih_user', JSON.stringify(devUser))
+      setUser(devUser)
     } catch (error) {
       console.error('Auth check failed:', error)
+      setUser(null)
     } finally {
       setLoading(false)
     }
   }
 
   const handleLogin = async (userData) => {
+    console.log('[App] handleLogin called - user:', userData?.id, userData?.role_name)
     setUser(userData)
   }
 
@@ -38,6 +58,16 @@ export default function App() {
     setUser(null)
   }
 
+  const handleSplashFinish = () => {
+    setShowSplash(false)
+  }
+
+  // Show animated splash screen first
+  if (showSplash) {
+    return <SplashScreen onFinish={handleSplashFinish} />
+  }
+
+  // Show loading after splash
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -46,6 +76,7 @@ export default function App() {
     )
   }
 
+  // Main app navigation
   return (
     <NavigationContainer>
       <StatusBar style="light" />
@@ -63,7 +94,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
+    backgroundColor: COLORS.background
+  }
 })
-

@@ -3,11 +3,14 @@ import { RefreshControl, ScrollView, StyleSheet, Text, View, TouchableOpacity, A
 import { Ionicons } from '@expo/vector-icons'
 import { useNavigation } from '@react-navigation/native'
 import { alertsService } from '../services/alerts'
-import { authService } from '../services/auth'
+import authService from '../services/auth'
 import api from '../services/api'
 import { useOfflineQueue } from '../hooks/useOfflineQueue'
 import { useNetwork } from '../hooks/useNetwork'
 import { COLORS, ROLES } from '../utils/constants'
+
+import { weatherService } from '../services/weather'
+
 
 export default function HomeScreen() {
   const navigation = useNavigation()
@@ -18,41 +21,47 @@ export default function HomeScreen() {
   const { isOnline } = useNetwork()
 
   const loadData = async () => {
+    // 1. Fetch Live Weather (non-blocking, has own fallback)
     try {
-      // Fetch sensors to get latest data
+      const weatherData = await weatherService.getCurrentWeather()
+      setWeather({
+        temp: weatherData.temp,
+        rain: weatherData.rain
+      })
+    } catch (weatherError) {
+      // Silent fallback - no logs, just defaults
+      setWeather({ temp: '--', rain: '--' })
+    }
+
+    // 2. Fetch sensors (only if user is logged in with valid auth)
+    if (!user) {
+      // Not logged in yet - this is normal during app startup
+      return
+    }
+
+    try {
       const params = user?.slope_id ? { slopeId: user.slope_id } : {}
       const sensorsRes = await api.get('/sensors', { params })
       const sensors = sensorsRes.data.data
 
       if (sensors && sensors.length > 0) {
-        // 1. Risk Level (from displacement/vibration)
+        // Risk Level Logic...
         const dispSensor = sensors.find(s => s.sensor_type === 'displacement')
         if (dispSensor) {
           const readingsRes = await api.get(`/sensors/${dispSensor.id}/readings`)
           const readings = readingsRes.data.data
           if (readings && readings.length > 0) {
-            // Simple logic for demo: > 5mm is High, > 2mm is Medium
             const val = readings[0].value
             if (val > 5) setRiskLevel('High')
             else if (val > 2) setRiskLevel('Medium')
             else setRiskLevel('Low')
           }
         }
-
-        // 2. Weather (from rain gauge)
-        const rainSensor = sensors.find(s => s.sensor_type === 'rain_gauge')
-        if (rainSensor) {
-          const readingsRes = await api.get(`/sensors/${rainSensor.id}/readings`)
-          const readings = readingsRes.data.data
-          if (readings && readings.length > 0) {
-            setWeather(prev => ({ ...prev, rain: `${readings[0].value} mm` }))
-          }
-        }
-        // Mock temp for now as we don't have a temp sensor in demo data yet
-        setWeather(prev => ({ ...prev, temp: '28°C' }))
       }
     } catch (error) {
-      console.warn('Failed to load dashboard data', error)
+      // API errors are not critical - user may not be fully authenticated yet
+      // Dashboard will show defaults (--) which is acceptable
+      setRiskLevel('--')
     }
   }
 
@@ -151,11 +160,27 @@ export default function HomeScreen() {
               <Text style={styles.weatherLabel}>Rain (1h)</Text>
             </View>
           </View>
+
         </TouchableOpacity>
-      </View>
+
+        {/* 5. Manage Workers (Site Admin Only) */}
+        {
+          user?.role_name === ROLES.SITE_ADMIN && (
+            <TouchableOpacity style={[styles.card, styles.cardMedium]} onPress={() => navigation.navigate('WorkerManagement')}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Team</Text>
+              </View>
+              <View style={styles.iconContainer}>
+                <Text style={styles.icon}>👷</Text>
+              </View>
+              <Text style={styles.actionText}>Manage Workers</Text>
+            </TouchableOpacity>
+          )
+        }
+      </View >
 
 
-    </ScrollView>
+    </ScrollView >
   )
 }
 

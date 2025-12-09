@@ -4,9 +4,14 @@ export const alertsService = {
   async getAll(slopeId) {
     try {
       const params = slopeId ? { slopeId } : {}
+      console.log('[alertsService] Fetching alerts with params:', params)
       const response = await api.get('/alerts/all', { params })
-      return response.data.data
+      console.log('[alertsService] Alerts response:', response?.data?.success, 'data items:', response?.data?.data?.length || 0)
+      return response.data.data || []
     } catch (error) {
+      console.error('[alertsService] Failed to fetch alerts:', error?.message || error)
+      console.error('[alertsService] Response status:', error?.response?.status)
+      console.error('[alertsService] Response data:', error?.response?.data)
       throw new Error(error.response?.data?.message || 'Failed to fetch alerts')
     }
   },

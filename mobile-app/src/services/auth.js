@@ -1,16 +1,32 @@
 import api from './api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-export const authService = {
-  async login(email, password) {
+const authService = {
+  async login(email, password, phone = null) {
     try {
-      const response = await api.post('/auth/login', { email, password })
+      const payload = { password }
+      if (email) payload.email = email
+      if (phone) payload.phone = phone
 
+      console.log('[authService] Logging in with:', { email, phone })
+      console.log('[authService] Payload:', payload)
+      console.log('[authService] Making POST to /auth/login')
+      
+      const response = await api.post('/auth/login', payload)
+
+      console.log('[authService] Response received:', JSON.stringify(response?.data, null, 2))
+      console.log('[authService] Login response success:', response?.data?.success)
+      
       if (!response.data?.success) {
         throw new Error(response.data?.message || 'Invalid credentials')
       }
 
       const user = response.data.data
+      const token = response.data.token
+      
+      console.log('[authService] Token received:', !!token, 'Length:', token?.length)
+      console.log('[authService] User received:', user?.id, user?.email, 'Role:', user?.role_name)
+
       if (!user.role_name && user.role_id) {
         const roleNameMap = {
           1: 'field_worker',
@@ -22,13 +38,18 @@ export const authService = {
       }
 
       // Save token and user
-      if (response.data.token) {
-        await AsyncStorage.setItem('sih_token', response.data.token)
+      if (token) {
+        console.log('[authService] Saving token to AsyncStorage')
+        await AsyncStorage.setItem('sih_token', token)
         await AsyncStorage.setItem('sih_user', JSON.stringify(user))
+        console.log('[authService] Token and user saved successfully')
+      } else {
+        console.error('[authService] No token in response:', response.data)
       }
 
-      return { success: true, data: user, token: response.data.token }
+      return { success: true, data: user, token }
     } catch (error) {
+      console.error('[authService] Login error:', error.message)
       if (error.response) {
         throw new Error(error.response.data?.message || 'Login failed')
       }
@@ -37,8 +58,32 @@ export const authService = {
   },
 
   async register(userData) {
+    const roleValue = userData.role || userData.roleName || userData.role_name || userData.roleId || userData.role_id
+    const roleNameMap = {
+      1: 'field_worker',
+      2: 'site_admin',
+      3: 'gov_authority',
+      4: 'super_admin',
+    }
+
+    const normalizedRole = typeof roleValue === 'number'
+      ? roleNameMap[roleValue]
+      : (roleValue || '').toString().toLowerCase()
+
+    const endpointByRole = {
+      field_worker: '/auth/register/worker',
+      site_admin: '/auth/register/site-admin',
+      gov_authority: '/auth/register/gov',
+    }
+
+    const endpoint = endpointByRole[normalizedRole]
+
+    if (!endpoint) {
+      throw new Error('Unsupported role for registration. Please choose Worker, Site Admin, or Govt Authority.')
+    }
+
     try {
-      const response = await api.post('/auth/register', userData)
+      const response = await api.post(endpoint, userData)
       return response.data
     } catch (error) {
       if (error.response) {
@@ -88,14 +133,34 @@ export const authService = {
   async getCurrentUser() {
     try {
       const userStr = await AsyncStorage.getItem('sih_user')
-      return userStr ? JSON.parse(userStr) : null
+      console.log('[authService] getCurrentUser - stored user data present:', !!userStr)
+      if (userStr) {
+        const user = JSON.parse(userStr)
+        console.log('[authService] getCurrentUser returning:', user?.id, user?.role_name)
+        return user
+      }
+      console.log('[authService] getCurrentUser - no stored user')
+      return null
     } catch (error) {
+      console.error('[authService] getCurrentUser error:', error)
       return null
     }
   },
 
   async getToken() {
-    return await AsyncStorage.getItem('sih_token')
+    try {
+      const token = await AsyncStorage.getItem('sih_token')
+      if (token) {
+        console.log('[authService] getToken - token found, length:', token.length)
+      } else {
+        console.log('[authService] getToken - NO token in AsyncStorage')
+      }
+      return token
+    } catch (error) {
+      console.error('[authService] getToken error:', error)
+      return null
+    }
   },
 }
 
+export default authService

@@ -11,16 +11,14 @@ import MapScreen from '../screens/MapScreen'
 import ClimateScreen from '../screens/ClimateScreen'
 import ComplaintScreen from '../screens/ComplaintScreen'
 import SosScreen from '../screens/SosScreen'
-import GovAlertsScreen from '../screens/GovAlertsScreen'
-import SensorsScreen from '../screens/SensorsScreen'
-import SensorDetailScreen from '../screens/SensorDetailScreen'
+import WorkerManagementScreen from '../screens/WorkerManagementScreen'
 import AlertsScreen from '../screens/AlertsScreen'
-import TasksScreen from '../screens/TasksScreen'
-import ProfileScreen from '../screens/ProfileScreen'
+import GovAlertsScreen from '../screens/GovAlertsScreen'
+import AdminScreen from '../screens/AdminScreen'
 import MLPredictScreen from '../screens/MLPredictScreen'
 import MLDetectScreen from '../screens/MLDetectScreen'
 import MLForecastScreen from '../screens/MLForecastScreen'
-import AdminScreen from '../screens/AdminScreen'
+import ProfileScreen from '../screens/ProfileScreen'
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -40,10 +38,9 @@ function HomeStack({ onLogout, user }) {
           title: 'Dashboard',
           headerRight: () => (
             <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
-              <Image
-                source={{ uri: 'https://ui-avatars.com/api/?name=' + (user?.name || 'User') + '&background=random' }}
-                style={{ width: 32, height: 32, borderRadius: 16 }}
-              />
+              <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+                <Ionicons name="person-circle-outline" size={32} color={COLORS.text} />
+              </TouchableOpacity>
             </TouchableOpacity>
           )
         })}
@@ -51,6 +48,7 @@ function HomeStack({ onLogout, user }) {
       <Stack.Screen name="Alerts" component={AlertsScreen} />
       <Stack.Screen name="Map" component={MapScreen} />
       <Stack.Screen name="Climate" component={ClimateScreen} />
+      <Stack.Screen name="WorkerManagement" component={WorkerManagementScreen} options={{ title: 'Manage Workers' }} />
       <Stack.Screen name="Profile">
         {(props) => <ProfileScreen {...props} onLogout={onLogout} />}
       </Stack.Screen>
@@ -73,19 +71,7 @@ function MLStack() {
   )
 }
 
-function SensorsStack() {
-  return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: COLORS.surface },
-        headerTintColor: COLORS.text,
-      }}
-    >
-      <Stack.Screen name="SensorsList" component={SensorsScreen} options={{ title: 'Sensors' }} />
-      <Stack.Screen name="SensorDetail" component={SensorDetailScreen} />
-    </Stack.Navigator>
-  )
-}
+
 
 export default function AppNavigator({ user, onLogout }) {
   const isSuperAdmin = user?.role_name === ROLES.SUPER_ADMIN
@@ -119,8 +105,7 @@ export default function AppNavigator({ user, onLogout }) {
             iconName = focused ? 'camera' : 'camera-outline'
           } else if (route.name === 'SOS') {
             iconName = focused ? 'warning' : 'warning-outline'
-          } else if (route.name === 'Sensors') {
-            iconName = focused ? 'hardware-chip' : 'hardware-chip-outline'
+
           } else if (route.name === 'ML') {
             iconName = focused ? 'analytics' : 'analytics-outline'
           } else if (route.name === 'Alerts') {
@@ -148,11 +133,7 @@ export default function AppNavigator({ user, onLogout }) {
       <Tab.Screen name="Report" component={ComplaintScreen} />
       <Tab.Screen name="SOS" component={SosScreen} />
 
-      <Tab.Screen
-        name="Sensors"
-        component={SensorsStack}
-        options={{ headerShown: false }}
-      />
+
 
       {canSeeML && (
         <Tab.Screen
@@ -160,10 +141,6 @@ export default function AppNavigator({ user, onLogout }) {
           component={MLStack}
           options={{ headerShown: false }}
         />
-      )}
-
-      {canSeeTasks && (
-        <Tab.Screen name="Tasks" component={TasksScreen} />
       )}
 
       {canSeeAdvisories && (

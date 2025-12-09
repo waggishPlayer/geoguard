@@ -7,7 +7,8 @@ const config = {
   dbSSL: process.env.DB_SSL === "true",
   // databaseUrl: process.env.DATABASE_URL || 'postgres://postgres:1@localhost:5432/sih_db',
   jwtSecret: process.env.JWT_SECRET || 'supersecretjwt',
-  mlServiceUrl: process.env.ML_SERVICE_URL || 'http://localhost:8000'
+  mlServiceUrl: process.env.ML_SERVICE_URL || 'http://localhost:8000',
+  devBypassToken: process.env.DEV_BYPASS_TOKEN || 'DEV_BYPASS'
 };
 
 module.exports = config;

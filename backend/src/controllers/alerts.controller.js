@@ -6,6 +6,27 @@ const {
 } = require('../models/queries');
 const { notifyUsers } = require('../services/notification.service');
 
+// Test endpoint to check database connectivity
+const testDbConnection = async (req, res, next) => {
+  try {
+    console.log('[alerts.controller] Testing database connection...')
+    const { query } = require('../models/db');
+    const result = await query('SELECT NOW() as current_time');
+    return res.json({
+      success: true,
+      message: 'Database connected',
+      timestamp: result.rows[0].current_time
+    });
+  } catch (error) {
+    console.error('[alerts.controller] Database connection failed:', error.message);
+    return res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
+      error: error.message
+    });
+  }
+};
+
 const createAlertController = async (req, res, next) => {
   try {
     const { slopeId, alertType, message, severity } = req.body;
@@ -172,6 +193,7 @@ const postAdvisory = async (req, res, next) => {
 };
 
 module.exports = {
+  testDbConnection,
   createAlert: createAlertController,
   acknowledge,
   getAlertsForSlope,

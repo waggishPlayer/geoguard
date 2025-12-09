@@ -5,6 +5,9 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Test endpoint
+router.get('/test/db', alertsController.testDbConnection);
+
 router.get('/all', requireAuth, alertsController.listAllAlerts);
 
 router.post(

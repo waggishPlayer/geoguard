@@ -8,7 +8,7 @@ const router = express.Router();
 router.get(
   '/',
   requireAuth,
-  requireRole('FIELD_WORKER', 'SITE_ADMIN', 'SUPER_ADMIN'),
+  requireRole('FIELD_WORKER', 'SITE_ADMIN', 'SUPER_ADMIN', 'GOV_AUTHORITY'),
   sensorsController.listSensors
 );
 
@@ -36,7 +36,7 @@ router.post(
 router.get(
   '/:sensorId/readings',
   requireAuth,
-  requireRole('FIELD_WORKER', 'SITE_ADMIN', 'SUPER_ADMIN'),
+  requireRole('FIELD_WORKER', 'SITE_ADMIN', 'SUPER_ADMIN', 'GOV_AUTHORITY'),
   sensorsController.getReadings
 );
 
