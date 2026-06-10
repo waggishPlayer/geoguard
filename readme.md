@@ -44,20 +44,6 @@ This repository is organized as a multi-service project:
 
 ---
 
-## Interface snapshots
-
-### Web Login
-![Web Login](./assets/screenshots/web-login.png)
-
-### Web Register
-![Web Register](./assets/screenshots/web-register.png)
-
-### Additional screenshot references (provided)
-- Login UI: https://github.com/user-attachments/assets/cb14ef18-c511-407c-bb2e-289b49b1d9c5
-- Register UI: https://github.com/user-attachments/assets/b4a9c2ba-9a71-4f42-947f-b8aa3090f881
-
----
-
 ## Quick start (local development)
 
 ### 1) Backend
@@ -123,4 +109,3 @@ Default ML port: `8000`
 - The codebase has broad feature coverage across web/mobile/backend/ML.
 - Existing docs are spread across multiple files; this `readme.md` serves as a consolidated project-level overview.
 - Baseline lint/build checks currently report **pre-existing issues** in web/mobile modules (not introduced by this documentation update).
-
